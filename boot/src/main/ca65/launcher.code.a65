@@ -1,0 +1,112 @@
+;    boot: Boot.
+;    Copyright (C) 2026 C64PECTRE
+;
+;    This program is free software: you can redistribute it and/or modify
+;    it under the terms of the GNU General Public License as published by
+;    the Free Software Foundation, either version 3 of the License, or
+;    (at your option) any later version.
+;
+;    This program is distributed in the hope that it will be useful,
+;    but WITHOUT ANY WARRANTY; without even the implied warranty of
+;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;    GNU General Public License for more details.
+;
+;    You should have received a copy of the GNU General Public License
+;    along with this program.  If not, see https://www.gnu.org/licenses/.
+;
+;    Contact: https://github.com/c64pectre/gnux/ create an issue
+
+; We should be somewhere between $0110 and (lower than) $01F0
+
+;region BASIC
+
+LOBASIC_RUNC := $A659
+LOBASIC_NEWSTT := $A7AE
+
+;endregion
+
+; region Launcher
+
+; Load "load" program
+.proc LAUNCH
+    ; Turn off "searching for FILE" message
+    lda # KERNAL_MSG_OFF
+    jsr KERNAL_SETMSG
+
+    ; Display "boot" message
+    ldx # < RESOURCE_STRING_MSG_LAUNCHING
+    ldy # > RESOURCE_STRING_MSG_LAUNCHING
+    jsr OUT_PUTS_ZSTRING_XY
+
+    ; load "sh"
+    lda # FILENAME_LENGTH
+    ldx # < RESOURCE_STRING_FILENAME
+    ldy # > RESOURCE_STRING_FILENAME
+    jsr KERNAL_SETNAM
+    lda # 1                             ; la
+    ldx ZPKERNAL_FA                     ; fa e.g. device 8 (disk)
+    ldy # 1                             ; sa
+    jsr KERNAL_SETLFS
+    lda # 0                             ; Use load address from in file
+    jsr KERNAL_LOAD
+    ; X=65 Y=14
+    if_cs_then
+        lda # KERNAL_MSG_ERROR_ENABLE | KERNAL_MSG_STATUS_ENABLE
+        jsr KERNAL_SETMSG
+        ldx # < RESOURCE_STRING_MSG_FAIL
+        ldy # > RESOURCE_STRING_MSG_FAIL
+        jsr OUT_PUTS_ZSTRING_XY
+        jmp [BVECTORS_IMAIN]
+    else_end
+
+    ; Load succeeded
+
+    ; Setup stack, because it was basically destroyed
+    ldx # $FF
+    txs
+
+    ; BASIC RUN (https://www.lemon64.com/forum/viewtopic.php?t=70680)
+    jsr LOBASIC_RUNC
+    jmp LOBASIC_NEWSTT
+    ; Does not return here
+.endproc
+
+; endregion
+
+; region Helper procedures
+
+;;; summary: Put string to console
+.proc OUT_PUTS_ZSTRING_XY
+    stx AL
+    sty AH
+    from
+        ldy # 0
+    loop
+        lda [AX] , Y
+        beq _end
+        jsr KERNAL_CHROUT
+    next
+        iny
+        bne _loop
+    end
+
+    rts
+.endproc
+
+.proc BSR_DX
+    jmp [DX]
+    rts
+.endproc
+
+; endregion
+
+; region Resources - String
+
+RESOURCE_STRING_FILENAME: .byte "sh" , PETSCII_NUL
+FILENAME_LENGTH = 2
+
+RESOURCE_STRING_MSG_LAUNCHING: .byte PETSCII_RETURN , "boot" , PETSCII_RETURN , PETSCII_NUL
+
+RESOURCE_STRING_MSG_FAIL: .byte "fail" , PETSCII_RETURN , PETSCII_NUL
+
+; endregion
