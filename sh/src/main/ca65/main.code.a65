@@ -997,7 +997,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Device present. (Attempt to) read (but not show) disk status.
     ldx DL                                              ; X = DL = DEVICE
-    jsr OPEN_DISK_STATUS                                ; A+ X+ Y+ C+
+    jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+ C+
     jsr READ_DISK_STATUS                                ; A+ X+ Y+ AX+
 
     ; We need to close here, because LOAD_PROGRAM may be called again without RESET_FILE_IO having been called.
@@ -1044,7 +1044,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ AX+
 .proc PROCESS_DISK_STATUS
-    jsr OPEN_DISK_STATUS                                ; A+ X+ Y+ C+
+    jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+ C+
     jsr READ_DISK_STATUS                                ; A+ X+ Y+ AX+
     jsr OUT_DISK_STATUS_IF_ERROR                        ; A+ X+ Y+ AX+
     php
@@ -1054,16 +1054,19 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; summary: Open disk command channel
+;;; summary: Open disk command and status channel
 ;;; in:
 ;;;   X: DEVICE
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+
-.proc OPEN_DISK_STATUS
+.proc OPEN_DISK_COMMAND_STATUS_CHANNEL
     lda # DISK_COMMAND_FA_SA
     tay
-    jsr OPEN_FILE_NO_NAME                               ; A+ X+ Y+ C+
+    jsr KERNAL_SETLFS                                   ; A=FA X=DA Y=SA | A- X- Y-
+    lda # 0
+    jsr KERNAL_SETNAM                                   ; A- X- Y-
+    jsr KERNAL_OPEN                                     ; A+ X+ Y+ C+
 
     rts
 .endproc
@@ -1075,6 +1078,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   DISK_STATUS_TEXT: Disk status that has been read
 ;;; changed: A+ X+ Y+ AX+
 .proc READ_DISK_STATUS
+    jsr CLRCHN
     ; Set input
     ldx # DISK_COMMAND_FA
     jsr KERNAL_CHKIN                                    ; A+ X+ Y+ C+
@@ -1447,23 +1451,20 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     ; Open
-    lda # DISK_COMMAND_FA_SA
-    tay
     ldx WORK_DEVICE
-    jsr OPEN_FILE_AX
-    jsr OPEN_DISK_STATUS
+    jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+ C+
 
     ; Set output
-   ;ldx # DISK_COMMAND_FA
-   ;jsr KERNAL_CHKOUT                                   ; A+ X+ Y+ C+
+    ldx # DISK_COMMAND_FA
+    jsr KERNAL_CHKOUT                                   ; A+ X+ Y+ C+
 
-    ;jsr OUT_WRITE_ZSTRING_AX
-    ;lda # PETSCII_RETURN
-    ;jsr KERNAL_CHROUT                                   ; ; A- X- Y- C0
+    jsr OUT_PUT_STRING_ZSTRING_AX
+    lda # PETSCII_RETURN
+    jsr KERNAL_CHROUT                                   ; A- X- Y- C0
 
-    ;jsr OPEN_DISK_STATUS
-    jsr READ_DISK_STATUS
-    jsr OUT_DISK_STATUS
+    ldx WORK_DEVICE
+    jsr READ_DISK_STATUS                                ; A+ X+ Y+ AX+
+    jsr OUT_DISK_STATUS                                 ; A+ X+ Y+ AX+
 
     rts
 .endproc
@@ -1918,7 +1919,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc OUT_PUT_STRING_ZSTRING_XY
     stx AL
     sty AH
-    jsr OUT_WRITE_ZSTRING_AX
+    jsr OUT_PUT_STRING_ZSTRING_AX
 
     rts
 .endproc
@@ -1928,7 +1929,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   AX: Nul-terminated string
 ;;; changed:
 ;;;   A+ X- Y+
-.proc OUT_WRITE_ZSTRING_AX
+.proc OUT_PUT_STRING_ZSTRING_AX
     from
         ldy # 0
     loop
@@ -1958,7 +1959,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; changed: A+ X+ Y+
 .proc OPEN_FILE_AX
     jsr KERNAL_SETLFS                                   ; A=FA X=DA Y=SA | A- X- Y-
-    jsr ZSTRING_AX_LENGTH                                ; A+ X- Y+
+    jsr ZSTRING_AX_LENGTH                               ; A+ X- Y+
     tya
     ldx AL
     ldy AH
@@ -2021,7 +2022,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .endproc
 
 ;;; changed: A+ X+ Y+ C+
-;;; todo: Errior handling
+;;; todo: Error handling
 .proc CLRCHN
     jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
@@ -2390,7 +2391,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     sta AL
     lda TABLE_ERROR_MESSAGE_HI,x
     sta AH
-    jsr OUT_WRITE_ZSTRING_AX
+    jsr OUT_PUT_STRING_ZSTRING_AX
     lda # PETSCII_RETURN
     jsr KERNAL_CHROUT
 
