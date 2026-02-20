@@ -23,7 +23,7 @@
 
 ;region Kernal internal
 
-KERNAL_NNMI20 := $FE72                                      ; Kernal nnmi20 continuation of NMI handing.
+KERNAL_NNMI20 := $FE72                      ; Kernal nnmi20 continuation of NMI handing.
 
 ;endregion
 
@@ -55,24 +55,24 @@ AREA_4_SIZE =  AREA_4_LAST - AREA_4 + 1
 
 ; Begin of ABI (Application Binary Interface)
 
-SYS_DEVICE             := AREA_3 + 0 ; $0334 ; $17FA
-SYS_DRIVE              := AREA_3 + 1 ; $0335 ; $17FB
-WORK_DEVICE            := AREA_3 + 2 ; $0336 ; $17FC
-WORK_DRIVE             := AREA_3 + 3 ; $0337 ; $17FD
-REDIRECT_INPUT_ACTIVE  := AREA_3 + 4 ; $0338 ; $17FE ; 0 = no , 1 = yes
-REDIRECT_OUTPUT_ACTIVE := AREA_3 + 5 ; $0339 ; $17FF ; 0 = no , 1 = yes
-IN_FA                  := AREA_3 + 6 ; $033A ; 0 = keyboard
-OUT_FA                 := AREA_3 + 7 ; $033B ; 0 = screen
+SYS_DEVICE             := AREA_3 + 0        ; $0334 ; $17FA
+SYS_DRIVE              := AREA_3 + 1        ; $0335 ; $17FB
+WORK_DEVICE            := AREA_3 + 2        ; $0336 ; $17FC
+WORK_DRIVE             := AREA_3 + 3        ; $0337 ; $17FD
+REDIRECT_INPUT_ACTIVE  := AREA_3 + 4        ; $0338 ; $17FE ; 0 = no , 1 = yes
+REDIRECT_OUTPUT_ACTIVE := AREA_3 + 5        ; $0339 ; $17FF ; 0 = no , 1 = yes
+IN_FA                  := AREA_3 + 6        ; $033A ; 0 = keyboard
+OUT_FA                 := AREA_3 + 7        ; $033B ; 0 = screen
 
 ; ARGC: Argument count
-ARGC                   := AREA_4 + 0 ; $033C ; AREA_4 + 0
-ARGC_LO                := ARGC       ; $033C ; AREA_4 + 0
-ARGC_HI                := ARGC + 1   ; $033D ; AREA_4 + 1
+ARGC                   := AREA_4 + 0        ; $033C
+ARGC_LO                := ARGC              ; $033C
+ARGC_HI                := ARGC + 1          ; $033D
 
 ; PARGV: Pointer to argv: argument value array: array of pointer to string
-PARGV                  := AREA_4 + 2 ; $033E ; AREA_4 + 2
-PARGV_LO               := PARGV      ; $033E ; AREA_4 + 2
-PARGV_HI               := PARGV + 1  ; $033F ; AREA_4 + 3
+PARGV                  := AREA_4 + 2        ; $033E
+PARGV_LO               := PARGV             ; $033E
+PARGV_HI               := PARGV + 1         ; $033F
 
 ; end of ABI
 
@@ -87,37 +87,37 @@ BUFFERED_OUTPUT_STREAM_BUFFER      := AREA_2
 BUFFERED_OUTPUT_STREAM_BUFFER_LAST := AREA_2_LAST
 BUFFERED_OUTPUT_STREAM_BUFFER_SIZE =  AREA_2_SIZE
 
-ARGV      := AREA_4 + 4 ; $0340 ; AREA_4 + 4
-ARGV_0    := ARGV + 0   ; $0340 ; AREA_4 + 4
-ARGV_0_LO := ARGV_0     ; $0340 ; AREA_4 + 4
-ARGV_0_HI := ARGV_0 + 1 ; $0341 ; AREA_4 + 5
-ARGV_1    := ARGV + 2   ; $0342 ; AREA_4 + 6
-ARGV_1_LO := ARGV_1     ; $0342 ; AREA_4 + 6
-ARGV_1_HI := ARGV_1 + 1 ; $0343 ; AREA_4 + 7
-ARGV_2    := ARGV + 4   ; $0344 ; AREA_4 + 8
-ARGV_2_LO := ARGV_2     ; $0344 ; AREA_4 + 8
-ARGV_2_HI := ARGV_2 + 1 ; $0345 ; AREA_4 + 9
-ARGV_3    := ARGV + 6   ; $0346 ; AREA_4 + 10
-ARGV_3_LO := ARGV_3     ; $0346 ; AREA_4 + 10
-ARGV_3_HI := ARGV_3 + 1 ; $0347 ; AREA_4 + 11
-ARGV_4    := ARGV + 8   ; $0348 ; AREA_4 + 12
-ARGV_4_LO := ARGV_4     ; $0348 ; AREA_4 + 12
-ARGV_4_HI := ARGV_4 + 1 ; $0349 ; AREA_4 + 13
-ARGV_5    := ARGV + 10  ; $034A ; AREA_4 + 14
-ARGV_5_LO := ARGV_5     ; $034A ; AREA_4 + 14
-ARGV_5_HI := ARGV_5 + 1 ; $034B ; AREA_4 + 15
-ARGV_6    := ARGV + 12  ; $034C ; AREA_4 + 16
-ARGV_6_LO := ARGV_6     ; $034C ; AREA_4 + 16
-ARGV_6_HI := ARGV_6 + 1 ; $034D ; AREA_4 + 17
-ARGV_7    := ARGV + 14  ; $034E ; AREA_4 + 18
-ARGV_7_LO := ARGV_7     ; $034E ; AREA_4 + 18
-ARGV_7_HI := ARGV_7 + 1 ; $034F ; AREA_4 + 19
-ARGV_8    := ARGV + 16  ; $0350 ; AREA_4 + 20
-ARGV_8_LO := ARGV_8     ; $0350 ; AREA_4 + 20
-ARGV_8_HI := ARGV_8 + 1 ; $0351 ; AREA_4 + 21
-ARGV_9    := ARGV + 18  ; $0352 ; AREA_4 + 22
-ARGV_9_LO := ARGV_9     ; $0352 ; AREA_4 + 22
-ARGV_9_HI := ARGV_9 + 1 ; $0353 ; AREA_4 + 23
+ARGV      := AREA_4 + 4                     ; $0340 ; AREA_4 + 4
+ARGV_0    := ARGV + 0                       ; $0340 ; AREA_4 + 4
+ARGV_0_LO := ARGV_0                         ; $0340 ; AREA_4 + 4
+ARGV_0_HI := ARGV_0 + 1                     ; $0341 ; AREA_4 + 5
+ARGV_1    := ARGV + 2                       ; $0342 ; AREA_4 + 6
+ARGV_1_LO := ARGV_1                         ; $0342 ; AREA_4 + 6
+ARGV_1_HI := ARGV_1 + 1                     ; $0343 ; AREA_4 + 7
+ARGV_2    := ARGV + 4                       ; $0344 ; AREA_4 + 8
+ARGV_2_LO := ARGV_2                         ; $0344 ; AREA_4 + 8
+ARGV_2_HI := ARGV_2 + 1                     ; $0345 ; AREA_4 + 9
+ARGV_3    := ARGV + 6                       ; $0346 ; AREA_4 + 10
+ARGV_3_LO := ARGV_3                         ; $0346 ; AREA_4 + 10
+ARGV_3_HI := ARGV_3 + 1                     ; $0347 ; AREA_4 + 11
+ARGV_4    := ARGV + 8                       ; $0348 ; AREA_4 + 12
+ARGV_4_LO := ARGV_4                         ; $0348 ; AREA_4 + 12
+ARGV_4_HI := ARGV_4 + 1                     ; $0349 ; AREA_4 + 13
+ARGV_5    := ARGV + 10                      ; $034A ; AREA_4 + 14
+ARGV_5_LO := ARGV_5                         ; $034A ; AREA_4 + 14
+ARGV_5_HI := ARGV_5 + 1                     ; $034B ; AREA_4 + 15
+ARGV_6    := ARGV + 12                      ; $034C ; AREA_4 + 16
+ARGV_6_LO := ARGV_6                         ; $034C ; AREA_4 + 16
+ARGV_6_HI := ARGV_6 + 1                     ; $034D ; AREA_4 + 17
+ARGV_7    := ARGV + 14                      ; $034E ; AREA_4 + 18
+ARGV_7_LO := ARGV_7                         ; $034E ; AREA_4 + 18
+ARGV_7_HI := ARGV_7 + 1                     ; $034F ; AREA_4 + 19
+ARGV_8    := ARGV + 16                      ; $0350 ; AREA_4 + 20
+ARGV_8_LO := ARGV_8                         ; $0350 ; AREA_4 + 20
+ARGV_8_HI := ARGV_8 + 1                     ; $0351 ; AREA_4 + 21
+ARGV_9    := ARGV + 18                      ; $0352 ; AREA_4 + 22
+ARGV_9_LO := ARGV_9                         ; $0352 ; AREA_4 + 22
+ARGV_9_HI := ARGV_9 + 1                     ; $0353 ; AREA_4 + 23
 
 ; String buffer for disk command, directory, file. Need 40 bytes + 1 for NUL.
 DISK_COMMAND_LENGTH = 41
@@ -159,6 +159,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc MAIN
     jsr INITIALIZE
     jsr RUN
+
     rts
 .endproc
 
@@ -274,7 +275,8 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc SHOW_PROMPT
     ldx # < RESOURCE_ZSTRING_PROMPT
     ldy # > RESOURCE_ZSTRING_PROMPT
-    jsr OUT_PUT_STRING_ZSTRING_XY                                  ; A+ X- Y+ AX+
+    jsr OUT_PUT_STRING_ZSTRING_XY                       ; A+ X- Y+ AX+
+
     rts
 .endproc
 
@@ -282,11 +284,9 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; out:
 ;;;   COMMAND_LINE: One line of text, PETSCII_RETURN replaced with PETSCII_NUL.
 .proc READ_COMMAND_LINE
-    lda # < COMMAND_LINE
-    sta AL
-    lda # > COMMAND_LINE
-    sta AH
-    jsr IN_READ_LINE_AX                                 ; A+ X+ Y+
+    ldx # < COMMAND_LINE
+    ldy # > COMMAND_LINE
+    jsr IN_READ_LINE_XY                                 ; A+ X+ Y+
 
     lda # PETSCII_RETURN
     jsr KERNAL_CHROUT                                   ; A- X- Y-
@@ -315,8 +315,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # 0
     sta ARGC_LO
     ; ARGC_HI is always 0
-    tay
-    ; A=0 Y=0 ARGC=0
     from OUTER
         ; POINTER TO BYTE DX := & COMMAND_LINE
         lda # < COMMAND_LINE
@@ -324,40 +322,21 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         lda # > COMMAND_LINE
         sta DH
     loop
-
         ; Skip any SPACE and NO_BREAK_SPACE
-        ;jsr SKIP_BLANKS
-        ;beq OUTER::_end     ; break
-
-        ; A := *DX
-        lda [DX],y
-        ; EOI?
-        if_eq_then
-            jmp OUTER::_end                             ; break
-        else_end
-        
-        cmp # PETSCII_SPACE
-        if_eq_then
-            inc DL
-            bne OUTER::_loop                            ; bra
-        else_end
-
-        cmp # PETSCII_NO_BREAK_SPACE
-        if_eq_then
-            inc DL
-            bne OUTER::_loop                            ; bra
-        else_end
+        jsr SKIP_BLANKS                                 ; A+ X- Y=0 Z+
+        beq OUTER::_end                                 ; break
 
         ; Redirect input from file?
         cmp # PETSCII_LESS_THAN_SIGN
         if_eq_then
             ; Yes
-            jsr REDIRECT_INPUT_FROM_FILE
-            bcc OUTER::_loop                                ; OK -> continue
+            jsr REDIRECT_INPUT_FROM_FILE                ; A+ X+ Y+ AX+ BX+ 
+            bcc OUTER::_loop                            ; OK -> continue
 
             ; Error redirecting input from file
             ldx ERROR_NUMBER_CANT_OPEN_INPUT_FILE
             jsr OUT_ERROR_X_NUMBER
+
             rts
         else_end
 
@@ -366,7 +345,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         if_eq_then
             iny                                         ; Y = 1
             lda [DX],y
-            dey                                         ; Y = 0
             cmp # PETSCII_GREATER_THAN_SIGN
             if_eq_then
                 ; Redirect output to printer
@@ -376,16 +354,18 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
                 ; Error redirecting output to printer
                 ldx ERROR_NUMBER_PRINTER_NOT_PRESENT
                 jsr OUT_ERROR_X_NUMBER
+
                 rts
             else_end
 
             ; Redirect output to file
-            jsr REDIRECT_OUTPUT_TO_FILE                 ; A+ X- Y- AX+ BX+ CX+ DX+
+            jsr REDIRECT_OUTPUT_TO_FILE                 ; A+ X+ Y+ AX+ BX+ CX+ DX+
             bcc OUTER::_loop                            ; OK -> continue
 
             ; Error redirecting output to file
             ldx # ERROR_NUMBER_CANT_OPEN_OUTPUT_FILE
             jsr OUT_ERROR_X_NUMBER
+
             rts
         else_end
 
@@ -416,7 +396,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
         ; "else": A is not QUOTATION_MARK, SPACE, NO_BREAK_SPACE, NUL
         jsr SET_ARGV                                    ; Y=0
-        ;inc DL
         from_loop UNQUOTED_ARGUMENT
             lda [DX],y
             beq OUTER::_end                             ; NUL -> EOI -> break break
@@ -429,8 +408,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             bne UNQUOTED_ARGUMENT::_loop                ; bra
         end
 
-        ; Y != 0 ; Y = 0
-        ;ldy # 0
+        ldy # 0
         lda # PETSCII_NUL
         sta [DX],y
         inc DL
@@ -451,7 +429,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         ; Argument 0 not empty?
         if_ne_then
             jsr TRY_BUILT_IN_COMMAND
-            if_cs_then                                      ; Not built-in command
+            if_cs_then                                  ; Not built-in command
                 jsr LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
                 if_cc_then
                     jsr EXECUTE_PROGRAM
@@ -474,7 +452,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   BX: PARGV[A]
 ;;; changed: A+ X- Y+ BX+
 .proc GET_BX_PARGV_INDEX_A
-    ; BX := &PARGV[A]
+    ; BX := PARGV[A]
     ldy PARGV_LO
     sty BL
     ldy PARGV_HI
@@ -491,29 +469,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; summary: AX := ARGV[A]
-;;; in:
-;;;   A: Index 
-;;; out:
-;;;   AX: PARGV[A]
-;;; changed: A+ X- Y+ AX+
-.proc GET_AX_PARGV_INDEX_A
-    ldy PARGV_LO
-    sty AL
-    ldy PARGV_HI
-    sty AH
-    asl
-    tay
-    lda [AX],y
-    tax
-    iny
-    lda [AX],y
-    sta AH
-    stx AL
-
-    rts
-.endproc
-
 ;;; summary: Skip SPACE and NO_BREAK_SPACE in command line
 ;;; in:
 ;;;   DX: Pointer in command line
@@ -521,6 +476,26 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   DX: Pointer advanced to non blank character (may be NUL)
 ;;;   Z: 1: *DX = NUL , 0: *DX != NUL
 .proc SKIP_BLANKS
+    from
+        ldy # 0
+    loop
+        ; A := *DX
+        lda [DX],y
+        ; EOI?
+        beq _end                                        ; break
+    
+        cmp # PETSCII_SPACE
+        if_eq_then
+            inc DL
+            beq _loop                                   ; continue
+        else_end
+
+        cmp # PETSCII_NO_BREAK_SPACE
+        if_eq_then
+            inc DL
+            beq _loop                                   ; continue
+        else_end
+    next_end
 
     rts
 .endproc
@@ -644,17 +619,17 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; out:
 ;;;   REDIRECT_INPUT_ACTIVE: Set to 1: redirect input active
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X- Y+ BX+
+;;; changed: A+ X+ Y+ AX+ BX+
 ;;; notes: Need to preserve X & Y for PROCESS_COMMAND_LINE
 .proc REDIRECT_INPUT_FROM_FILE
     bit REDIRECT_INPUT_ACTIVE
-    if_mi_then                                              ; TRUE
+    if_mi_then                                          ; TRUE
         ; Redirect input already active.
-        sec                                                 ; FAIL
+        sec                                             ; FAIL
         rts
     else_end
 
-    jsr GET_FILE_NAME_FROM_COMMAND_LINE_FOR_WORK_DRIVE    ; A+ X+ Y+ AX+
+    jsr GET_FILE_NAME_FROM_COMMAND_LINE_FOR_WORK_DRIVE  ; A+ X- Y+ AX+
     if_cs_then
         rts
     else_end
@@ -677,19 +652,19 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .endproc
 
 ;;; summary: Redirect output to file named `FILE_NAME_TEXT` extracted from `COMMAND_LINE` on work disk
-;;; changed: A+ X- Y- AX+ BX+ CX+ DX+
+;;; changed: A+ X+ Y+ AX+ BX+ CX+ DX+
 ;;; notes:
 ;;;   We must preserve DX
 .proc REDIRECT_OUTPUT_TO_FILE
     bit REDIRECT_OUTPUT_ACTIVE
-    if_mi_then                                              ; TRUE
+    if_mi_then                                          ; TRUE
         ; Redirect output already active.
-        sec                                                 ; FAIL
+        sec                                             ; FAIL
         rts
     else_end
 
     ; AX := FILE
-    jsr GET_FILE_NAME_FROM_COMMAND_LINE_FOR_WORK_DRIVE  ; A+ X+ Y+ AX+ DX+
+    jsr GET_FILE_NAME_FROM_COMMAND_LINE_FOR_WORK_DRIVE  ; A+ X- Y+ AX+ DX+
     if_cs_then
         ; FAIL
         rts
@@ -698,7 +673,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; + ",s,w"
     ldx # < RESOURCE_ZSTRING_SEQ_WRITE
     ldy # > RESOURCE_ZSTRING_SEQ_WRITE
-    jsr ZSTRING_AX_APPEND_ZSTRING_XY_USING_BX_CX    ; A+ X- Y+ BX+ CX+
+    jsr ZSTRING_AX_APPEND_ZSTRING_XY_USING_BX_CX        ; A+ X- Y+ BX+ CX+
 
     ; Open
     lda # REDIRECT_OUTPUT_FA
@@ -722,8 +697,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Redirect output to printer (device 4)
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X- Y- BX+
-;;; notes: Need to preserve X & Y for PROCESS_COMMAND_LINE
+;;; changed: A+ X+ Y+ BX+
 .proc REDIRECT_OUTPUT_TO_PRINTER
     bit REDIRECT_OUTPUT_ACTIVE
     if_mi_then
@@ -732,14 +706,10 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    lda # < RESOURCE_STRING_EMPTY
-    sta AL
-    lda # > RESOURCE_STRING_EMPTY
-    sta AH
     lda # REDIRECT_OUTPUT_FA
     ldx # REDIRECT_OUTPUT_PRINTER_DA
     ldy # REDIRECT_OUTPUT_PRINTER_SA
-    jsr OPEN_OUT_FILE_AX
+    jsr OPEN_FILE_NO_NAME
     if_cc_then
         ldx # REDIRECT_OUTPUT_FA
         jsr KERNAL_CHKOUT                               ; A+ X+ Y+ C+
@@ -764,9 +734,9 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   BX: ZSTRING: Candidate command
 ;;; changed: A+ X+ Y+ BX+ DX+
 .proc TRY_BUILT_IN_COMMAND
-    jsr MAP_COMMAND_NAME_TO_COMMAND_NUMBER                  ; X = command number if Z=1
+    jsr MAP_COMMAND_NAME_TO_COMMAND_NUMBER              ; X = command number if Z=1
     if_ne_then
-        sec                                                 ; Not built-in command
+        sec                                             ; Not built-in command
         rts
     else_end
 
@@ -845,37 +815,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; summary: Back to default file I/O
-;;; changed: A+ X+ Y+ AL+
-.proc RESET_FILE_IO
-    ;jsr BUFFERED_OUTPUT_STREAM_FLUSH
-    ldx ZPKERNAL_LDTND
-    dex
-    if_pl_then
-        from
-            stx AL
-        loop
-            ldx AL
-            lda KVAR_LAT,x
-            jsr KERNAL_CLOSE                                ; A+ X+ Y+ C=0
-        next
-            dec AL
-            bpl _loop
-        end
-    else_end
-
-    jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
-
-    ; Redirect input & output inactive
-    lda # FALSE                                         ; A = FALSE = 0
-    sta REDIRECT_INPUT_ACTIVE                           ; Redirect input inactive
-    sta REDIRECT_OUTPUT_ACTIVE                          ; Redirect output inactive
-    sta IN_FA                                           ; 0 = Keyboard
-    sta OUT_FA                                          ; 0 = Screen
-
-    rts
-.endproc
-
 ;endregion
 
 ;region Loading
@@ -892,9 +831,9 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     sta AL
     lda # > LOADED_PROGRAM_NAME
     sta AH
-    jsr ZSTRING_AX_COMPARE_ZSTRING_BX                       ; A+ X- Y+ Z+
+    jsr ZSTRING_AX_COMPARE_ZSTRING_BX                   ; A+ X- Y+ Z+
     if_eq_then
-        clc                                                 ; OK
+        clc                                             ; OK
         rts
     else_end
 
@@ -923,6 +862,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             ; Load from system disk failed too.
             ldx # ERROR_NUMBER_COMMAND_NOT_FOUND
             jsr OUT_ERROR_X_NUMBER
+
             rts
         else_end
     else_end
@@ -933,7 +873,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     sta AL
     lda # > LOADED_PROGRAM_NAME
     sta AH
-    jsr ZSTRING_AX_COPY_TO_ZSTRING_BX                   ; A+ X- Y+
+    jsr ZSTRING_BX_COPY_TO_ZSTRING_AX                   ; A+ X- Y+
 
     clc                                                 ; OK
 
@@ -1079,15 +1019,16 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; changed: A+ X+ Y+ AX+
 .proc READ_DISK_STATUS
     jsr CLRCHN
+
     ; Set input
     ldx # DISK_COMMAND_FA
     jsr KERNAL_CHKIN                                    ; A+ X+ Y+ C+
+
     ; Read line
-    lda # < DISK_STATUS_TEXT
-    sta AL
-    lda # > DISK_STATUS_TEXT
-    sta AH
-    jsr IN_READ_LINE_AX                                 ; A+ X+ Y+ C+
+    ldx # < DISK_STATUS_TEXT
+    ldy # > DISK_STATUS_TEXT
+    jsr IN_READ_LINE_XY                                 ; A+ X+ Y+ C+
+
     rts
 .endproc
 
@@ -1177,8 +1118,8 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc CHANGE_DEVICE_DRIVE
     ; DEVICE = ARGV[1]
     lda # 1
-    jsr GET_AX_PARGV_INDEX_A
-    jsr ZTRING_AX_DECIMAL_TO_UBYTE_A                    ; A+ X- Y+ BX+
+    jsr GET_BX_PARGV_INDEX_A
+    jsr ZTRING_BX_DECIMAL_TO_UBYTE_A                    ; A+ X- Y+ BX+
     if
         cmp # DEVICE_DISK_MIN
         bcc _then
@@ -1187,6 +1128,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     then
         ldx # ERROR_NUMBER_WRONG_DEVICE
         jsr OUT_ERROR_X_NUMBER                          ; C = 1
+
         rts                                             ; FAIL
     else_end
 
@@ -1194,12 +1136,13 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; DRIVE = ARGV[2]
     lda # 2
-    jsr GET_AX_PARGV_INDEX_A
-    jsr ZTRING_AX_DECIMAL_TO_UBYTE_A                    ; A+ X- Y+ BX+
+    jsr GET_BX_PARGV_INDEX_A
+    jsr ZTRING_BX_DECIMAL_TO_UBYTE_A                    ; A+ X- Y+ BX+
     cmp # DEVICE_DISK_DRIVE_MAX + 1
     if_ge_then
         ldx # ERROR_NUMBER_WRONG_DRIVE
         jsr OUT_ERROR_X_NUMBER                          ; C = 1
+
         rts                                             ; FAIL
     else_end
 
@@ -1237,13 +1180,13 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;region Build-in commands
 
 .proc CMD_BYE
-   ;jsr RESET_FILE_IO
     lda SAVE_KERNAL_NMINV_LO
     sta KERNAL_NMINV_LO
     lda SAVE_KERNAL_NMINV_HI
     sta KERNAL_NMINV_HI
     ldx SAVE_S
     txs
+
     rts
 .endproc
 
@@ -1314,6 +1257,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     stx DL                                              ; DL = X = DEVICE
     sty DH                                              ; DH = Y = DRIVE
 
+    ; AX := "" + "$" + DRIVE
     ; ""
     jsr ZSTRING_AX_INIT_DISK_COMMAND_TEXT               ; A+ X- Y- AX+
 
@@ -1330,6 +1274,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda ARGC_LO
     cmp # 2
     if_eq_then
+        ; AX += ":" + ARGV[1]
         lda # 1
         jsr GET_BX_PARGV_INDEX_A
         jsr ZSTRING_BX_LENGTH                           ; A+ X- Y+
@@ -1357,14 +1302,14 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    ldx # FILE_FA                                         ; X = DL = DEVICE
-    jsr KERNAL_CHKIN
-
    ;ldx DL                                              ; A = DL = DEVICE
    ;jsr PROCESS_DISK_STATUS                             ; A+ X+ Y+ AX+
    ;if_cs_then
    ;    rts
    ;else_end
+
+    ldx # FILE_FA                                         ; X = DL = DEVICE
+    jsr KERNAL_CHKIN
 
     ; Load address
     jsr KERNAL_CHRIN
@@ -1418,7 +1363,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # PETSCII_RETURN
     jsr BUFFERED_OUTPUT_STREAM_PUT_BYTE_A               ; A+ X- Y+
     jsr BUFFERED_OUTPUT_STREAM_FLUSH                    ; A+ X+ Y+
-
     lda # FILE_FA
     jsr CLOSE                                           ; A+ X+ Y+ C=0
 
@@ -1426,7 +1370,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .endproc
 
 ;;; summary: Send command to work disk
-;;; changed: A+ X+ Y+ AX
+;;; changed: A+ X+ Y+ BX+
 .proc CMD_DISK
     lda ARGC_LO
     cmp # 2
@@ -1437,8 +1381,8 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     lda # 1
-    jsr GET_AX_PARGV_INDEX_A
-    jsr ZSTRING_AX_LENGTH
+    jsr GET_BX_PARGV_INDEX_A
+    jsr ZSTRING_BX_LENGTH
     if
         cpy # 0
         beq _then
@@ -1458,7 +1402,9 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ldx # DISK_COMMAND_FA
     jsr KERNAL_CHKOUT                                   ; A+ X+ Y+ C+
 
-    jsr OUT_PUT_STRING_ZSTRING_AX
+    ldx BL
+    ldy BH
+    jsr OUT_PUT_STRING_ZSTRING_XY
     lda # PETSCII_RETURN
     jsr KERNAL_CHROUT                                   ; A- X- Y- C0
 
@@ -1674,9 +1620,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # FILE_FA
     jsr CLOSE                                           ; A+ X+ Y+ C0
 
-    jsr CLRCHN
     ldx WORK_DEVICE
-
     jsr PROCESS_DISK_STATUS                             ; A+ X+ Y+ AX+
 
     rts
@@ -1691,6 +1635,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         ldx WORK_DEVICE
         ldy WORK_DRIVE
         jsr OUT_DEVICE_DRIVE
+
         rts
     else_end
 
@@ -1698,6 +1643,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
         jsr OUT_ERROR_X_NUMBER
+
         rts
     else_end
 
@@ -1721,6 +1667,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         ldx SYS_DEVICE
         ldy SYS_DRIVE
         jsr OUT_DEVICE_DRIVE
+
         rts
     else_end
 
@@ -1728,6 +1675,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
         jsr OUT_ERROR_X_NUMBER
+
         rts
     else_end
 
@@ -1790,10 +1738,10 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         ldy # 0
     loop
         lda [BX],y
-        beq _end                                            ; break
+        beq _end                                        ; break
     next
         iny
-        bne _loop                                           ; bra
+        bne _loop                                       ; bra
     end
 
     rts
@@ -1818,7 +1766,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         cmp # PETSCII_NUL
         beq _end
         iny
-        bne _loop                                               ; bra
+        bne _loop                                       ; bra
     end
 
     rts
@@ -1892,7 +1840,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   AX: TARGET
 ;;;   BX: SOURCE
 ;;; changed: A+ X- Y+
-.proc ZSTRING_AX_COPY_TO_ZSTRING_BX
+.proc ZSTRING_BX_COPY_TO_ZSTRING_AX
     from
         ldy # 0
     loop
@@ -2011,7 +1959,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+
 ;;; notes:
-;;;   Is for loading, disk command, disk status.
+;;;   Is for loading, disk command, disk status, redirect output to printer.
 .proc OPEN_FILE_NO_NAME
     jsr KERNAL_SETLFS                                   ; A=FA X=DA Y=SA | A- X- Y-
     lda # 0
@@ -2039,21 +1987,52 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; changed: A+ X+ Y+ C+
+;;; summary: Close file
+;;; in:
+;;;   A: FA
+;;; changed: A+ X+ Y+
 .proc CLOSE
     cmp IN_FA
     if_eq_then
         ldx # 0
         stx IN_FA
+        stx REDIRECT_INPUT_ACTIVE
     else_end
 
     cmp OUT_FA
     if_eq_then
         ldx # 0
         stx OUT_FA
+        stx REDIRECT_OUTPUT_ACTIVE
     else_end
 
     jsr KERNAL_CLOSE                                    ; A+ X+ Y+ C=0
+
+    jsr KERNAL_CLRCHN
+
+    rts
+.endproc
+
+;;; summary: Back to default file I/O
+;;; changed: A+ X+ Y+
+.proc RESET_FILE_IO
+    from_loop
+        ldx ZPKERNAL_LDTND
+        beq _end
+        lda KVAR_LAT
+        jsr KERNAL_CLOSE                                ; A+ X+ Y+
+    next
+        jmp _loop
+    end
+
+    jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+
+    ; Redirect input & output inactive
+    lda # FALSE                                         ; A = FALSE = 0
+    sta REDIRECT_INPUT_ACTIVE                           ; Redirect input inactive
+    sta REDIRECT_OUTPUT_ACTIVE                          ; Redirect output inactive
+    sta IN_FA                                           ; 0 = Keyboard
+    sta OUT_FA                                          ; 0 = Screen
 
     rts
 .endproc
@@ -2071,7 +2050,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda SAVE_KERNAL_READST
     ;cmp # KERNAL_OK = 0
     if_ne_then
-        sec                                                 ; FAIL
+        sec                                             ; FAIL
         rts
     else_end
 
@@ -2080,24 +2059,27 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr KERNAL_READST
         sta SAVE_KERNAL_READST
     pla
-    clc                                                     ; OK
+    clc                                                 ; OK
 
     rts
 .endproc
 
 ;;; summary: Read line from input channel to AX, replacing the RETURN with a NUL
 ;;; in:
-;;;   AX: BYTE[]
-;;; changed: A+ X+ Y+
-.proc IN_READ_LINE_AX
+;;;   X#Y: BYTE[]
+;;; changed: A+ X+ Y+ AX+
+.proc IN_READ_LINE_XY
+    stx AL
+    sty AH
     from
-        ldy # $FF                                       ; -1
+        ldy # 0
     loop
-        iny
         jsr KERNAL_CHRIN                                ; A+ X+ Y-
         sta [AX],y
-    next
         cmp # PETSCII_RETURN
+        beq _end
+    next
+        iny
         bne _loop
     end
 
@@ -2114,12 +2096,11 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Decimal string to unsigned byte
 ;;; in:
-;;;   AX: ZSTRING: Decimal number string
+;;;   BX: ZSTRING: Decimal number string
 ;;; out:
 ;;;   A: UBYTE: Binary representation of input
-;;;   BL: UBYTE = A
 ;;; changed:
-;;;   A+ X- Y+ BX+
+;;;   A+ X- Y+ AL+
 ;;; notes:
 ;;;   We do not check for valid input.
 ;;; cycles:
@@ -2127,35 +2108,35 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   1: 66
 ;;;   2: 113
 ;;;   3: 160
-.proc ZTRING_AX_DECIMAL_TO_UBYTE_A
+.proc ZTRING_BX_DECIMAL_TO_UBYTE_A
     from
         ldy # 0
-        sty BL
+        sty AL
     loop
-        lda [AX],y
+        lda [BX],y
         beq _end                                        ; A = NUL -> break
-        lda BL
+        lda AL
         asl
         asl
         asl
         ; C=0
-        adc BL
-        adc BL
-        sta BL
-        lda [AX],y
+        adc AL
+        adc AL
+        sta AL
+        lda [BX],y
         ; "0" = $30 <= A <= "9" = $39
         sec
         sbc # PETSCII_DIGIT_ZERO
         ; 0 <= A <= 9 ; C = 1
         clc
-        adc BL
-        sta BL
+        adc AL
+        sta AL
     next
         iny
         bne _loop                                       ; bra
     end
 
-    lda BL
+    lda AL
 
     rts
 .endproc
@@ -2439,7 +2420,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         cpx # BUFFERED_OUTPUT_STREAM_BUFFER_SIZE
         bne _end
     then
-        jsr BUFFERED_OUTPUT_STREAM_FLUSH                      ; A+ X+ Y+
+        jsr BUFFERED_OUTPUT_STREAM_FLUSH                ; A+ X+ Y+
     else_end
 
     rts
@@ -2455,11 +2436,11 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     loop
         lda AX,x
         cmp # PETSCII_NUL
-        beq _end                                    ; break
-        jsr BUFFERED_OUTPUT_STREAM_PUT_BYTE_A       ; A+ X- Y+
+        beq _end                                        ; break
+        jsr BUFFERED_OUTPUT_STREAM_PUT_BYTE_A           ; A+ X- Y+
     next
         inx
-        bne _loop                                   ; bra
+        bne _loop                                       ; bra
     end
 
     rts
@@ -2564,7 +2545,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
                 ldy CIA_2_ICR
                 if_mi_then
                     ; NMI occured yes
-                    jmp KERNAL_NNMI20                       ; Continue at original Kernal NMI handler
+                    jmp KERNAL_NNMI20                   ; Continue at original Kernal NMI handler
                 else_end
 
                 ; NMI occured no
@@ -2573,7 +2554,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
                 jsr KERNAL_STOP
                 if_ne_then
                     ; STOP key was not pressed
-                    jmp KERNAL_NNMI20                       ; Continue at original Kernal NMI handler
+                    jmp KERNAL_NNMI20                   ; Continue at original Kernal NMI handler
                 else_end
 
                 ; STOP key was pressed
@@ -2614,8 +2595,8 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
                 jsr RESET_FILE_IO
 
-                dec NMI_ENTRY_COUNT                         ; Allow entry
-                jmp RUN                                     ; Resume
+                dec NMI_ENTRY_COUNT                     ; Allow entry
+                jmp RUN                                 ; Resume
 .endproc
 
 ;endregion
