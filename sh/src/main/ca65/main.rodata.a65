@@ -77,23 +77,6 @@ RESOURCE_STRING_EMPTY:
 
 ;endregion
 
-;region Binary to decimal conversion table
-
-;;; summary: UWORD to decimal conversion table
-TABLE_UWORD_TO_DECIMAL_LO:
-        .byte   1       ; [0]
-        .byte   10      ; [1]
-        .byte   100     ; [2]
-        .byte   232     ; [3]
-
-TABLE_UWORD_TO_DECIMAL_HI:
-        .byte   0       ; [0]
-        .byte   0       ; [1]
-        .byte   0       ; [2]
-        .byte   3       ; [3]
-
-;endregion
-
 ;region Map Command name to command number
 
 COMMAND_NAME_EXIT: .asciiz "exit"
