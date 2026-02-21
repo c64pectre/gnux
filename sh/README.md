@@ -6,7 +6,7 @@ Commodore 64 Shell
 
 | Command | Description |
 | :- | :- |
-| `bye` | Exit shell. |
+| `exit` | Exit shell. |
 | `l` | List directory of work disk. Pause with SHIFT key. |
 | `ls` | List directory of system disk. Pause with SHIFT key. |
 | `mv FROM TO` | Move (rename) a file. |

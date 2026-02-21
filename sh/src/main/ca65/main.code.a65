@@ -1179,7 +1179,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;region Build-in commands
 
-.proc CMD_BYE
+.proc CMD_EXIT
     lda SAVE_KERNAL_NMINV_LO
     sta KERNAL_NMINV_LO
     lda SAVE_KERNAL_NMINV_HI
