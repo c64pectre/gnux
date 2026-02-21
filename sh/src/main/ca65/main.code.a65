@@ -300,27 +300,33 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   We only need to inc DL (and not DH as well) because we will not cross the page.
 .proc PROCESS_COMMAND_LINE
     jsr BUFFERED_OUTPUT_STREAM_INIT
+
     ; ARGC := 0
-    lda # 0
-    sta ARGC_LO
+    ldy # 0
+    sty ARGC_LO
     ; ARGC_HI is always 0
-    from OUTER
+
+    from ITERATE_COMMAND_LINE
         ; POINTER TO BYTE DX := & COMMAND_LINE
         lda # < COMMAND_LINE
         sta DL
         lda # > COMMAND_LINE
         sta DH
     loop
-        ; Skip any SPACE and NO_BREAK_SPACE
-        jsr SKIP_BLANKS                                 ; A+ X- Y=0 Z+
-        beq OUTER::_end                                 ; break
+        ; check Y = 0
+        jsr SKIP_BLANKS                                 ; A+ X- Y-
+        cmp # PETSCII_NUL
+        beq ITERATE_COMMAND_LINE::_end                  ; NUL -> break
 
         ; Redirect input from file?
         cmp # PETSCII_LESS_THAN_SIGN
         if_eq_then
             ; Yes
-            jsr REDIRECT_INPUT_FROM_FILE                ; A+ X+ Y+ AX+ BX+ 
-            bcc OUTER::_loop                            ; OK -> continue
+            ; Skip '<'
+            inc DL
+            jsr REDIRECT_INPUT_FROM_FILE                ; A+ X+ Y+ AX+ BX+
+            ldy # 0
+            bcc ITERATE_COMMAND_LINE::_loop             ; OK -> continue
 
             ; Error redirecting input from file
             ldx ERROR_NUMBER_CANT_OPEN_INPUT_FILE
@@ -332,13 +338,18 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         ; Redirect output to file or printer?
         cmp # PETSCII_GREATER_THAN_SIGN
         if_eq_then
-            iny                                         ; Y = 1
+            ; Skip '>'
+            inc DL
+            ; check Y = 0
             lda [DX],y
             cmp # PETSCII_GREATER_THAN_SIGN
             if_eq_then
+                ; Skip second '>'
+                inc DL
                 ; Redirect output to printer
-                jsr REDIRECT_OUTPUT_TO_PRINTER
-                bcc OUTER::_loop                        ; OK -> continue
+                jsr REDIRECT_OUTPUT_TO_PRINTER          ; A+ X+ Y+ C+
+                ldy # 0
+                bcc ITERATE_COMMAND_LINE::_loop         ; OK -> continue
 
                 ; Error redirecting output to printer
                 ldx ERROR_NUMBER_PRINTER_NOT_PRESENT
@@ -349,7 +360,8 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
             ; Redirect output to file
             jsr REDIRECT_OUTPUT_TO_FILE                 ; A+ X+ Y+ AX+ BX+ CX+ DX+
-            bcc OUTER::_loop                            ; OK -> continue
+            ldy # 0
+            bcc ITERATE_COMMAND_LINE::_loop             ; OK -> continue
 
             ; Error redirecting output to file
             ldx # ERROR_NUMBER_CANT_OPEN_OUTPUT_FILE
@@ -359,50 +371,35 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         else_end
 
         ; We have the start of an argument.
-        ; Quoted argument?
+        ; Quotation mark?
+        pha
+            cmp # PETSCII_QUOTATION_MARK
+            if_eq_then
+                inc DL
+            else_end
+
+            jsr SET_ARGV                                ; A+ X- Y=0
+        pla
+
         cmp # PETSCII_QUOTATION_MARK
         if_eq_then
-            ; Yes
-            inc DL
-            jsr SET_ARGV                                ; A+ X- Y=0
-            from_loop INNER
-                lda [DX],y
-                beq OUTER::_end                         ; NUL -> EOI -> break break
-                ; Closing quotation mark?
-                cmp # PETSCII_QUOTATION_MARK
-                beq INNER::_end                         ; Closing quotation mark -> break
-            next
-                inc DL
-                bne INNER::_loop                        ; bra
-            end
-
-            ; Found closing quotation mark
-            lda # PETSCII_NUL
-            sta [DX],y
-            inc DL
-            jmp OUTER::_loop                            ; continue
-        else_end
-
-        ; "else": A is not QUOTATION_MARK, SPACE, NO_BREAK_SPACE, NUL
-        jsr SET_ARGV                                    ; Y=0
-        from_loop UNQUOTED_ARGUMENT
-            lda [DX],y
-            beq OUTER::_end                             ; NUL -> EOI -> break break
-        next
-            cmp # PETSCII_SPACE
-            beq UNQUOTED_ARGUMENT::_end                 ; break
-            cmp # PETSCII_NO_BREAK_SPACE
-            beq UNQUOTED_ARGUMENT::_end                 ; break
-            inc DL
-            bne UNQUOTED_ARGUMENT::_loop                ; bra
+            jsr SKIP_QUOTED                             ; A+ X- Y- Z=1 DL+
+            beq _end                                    ; bra
+        else
+            jsr SKIP_UNQUOTED                           ; A+ X- Y- Z=1 DL+
         end
 
-        ldy # 0
+        ; check A = [DX]
+        cmp # PETSCII_NUL
+        beq ITERATE_COMMAND_LINE::_end                  ; NUL -> EOI -> break break
+
+        ; A != NUL and (A = SPACE or A = NO_BREAK_SPACE or A = QUOTATION_MARK)
         lda # PETSCII_NUL
+        ; check Y = 0
         sta [DX],y
         inc DL
     next
-        jmp _loop
+        bne ITERATE_COMMAND_LINE::_loop                 ; bra
     end
 
     ; Finished parsing input text
@@ -464,27 +461,82 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; out:
 ;;;   DX: Pointer advanced to non blank character (may be NUL)
 ;;;   Z: 1: *DX = NUL , 0: *DX != NUL
+;;; changed: A+ X- Y- DL+
 .proc SKIP_BLANKS
-    from
-        ldy # 0
-    loop
-        ; A := *DX
+    ; check Y = 0
+
+    from_loop
+        ; A := [DX]
         lda [DX],y
-        ; EOI?
-        beq _end                                        ; break
+        beq _end                                        ; EOI -> break
     
         cmp # PETSCII_SPACE
         if_eq_then
             inc DL
-            beq _loop                                   ; continue
+            bne _loop                                   ; SPACE -> continue
         else_end
 
         cmp # PETSCII_NO_BREAK_SPACE
         if_eq_then
             inc DL
-            beq _loop                                   ; continue
+            bne _loop                                   ; NO_BREAK_SPACE ->  continue
         else_end
     next_end
+
+    rts
+.endproc
+
+;;; summary: Skip up to and including NUL, SPACE, NO_BREAK_SPACE.
+;;; in:
+;;;   DX: Pointer in command line
+;;; out:
+;;;   A: = [DX]
+;;;   A: = NUL or = SPACE or = NO_BREAK_SPACE
+;;;;  Z: = 1
+;;; changed: A+ X- Y- DL+
+.proc SKIP_UNQUOTED
+    ; check Y = 0
+
+    from_loop
+        ; A := [DX]
+        lda [DX],y
+        beq _end                                        ; EOI -> break
+    
+        cmp # PETSCII_SPACE
+        beq _end                                        ; SPACE -> break
+
+        cmp # PETSCII_NO_BREAK_SPACE
+        beq _end                                        ; NO_BREAK_SPACE -> break
+    next
+        inc DL
+        bne _loop                                       ; bra
+    end
+
+    rts
+.endproc
+
+;;; summary: Skip up to and including NUL, QUOTATION_MARK.
+;;; in:
+;;;   DX: Pointer in command line
+;;; out:
+;;;   A: = NUL or = QUOTATION_MARK
+;;;   Z: = 1
+;;;   [DX]: = NUL or = QUOTATION_MARK
+;;; changed: A+ X- Y- DL+
+.proc SKIP_QUOTED
+    ; check Y = 0
+
+    from_loop
+        ; A := *DX
+        lda [DX],y
+        beq _end                                        ; EOI -> break
+    
+        cmp # PETSCII_QUOTATION_MARK
+        beq _end                                        ; QUOTATION_MARK -> break
+    next
+        inc DL
+        bne _loop                                       ; bra
+    end
 
     rts
 .endproc
@@ -497,7 +549,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   ARGV[ARGC++]: = DX
 ;;;   Y: = 0
 ;;; changed:
-;;;   A+ X- Y+
+;;;   A+ X- Y=0
 .proc SET_ARGV
     ; Y := ARGC * SIZEOF(WORD) = ARGC * 2 = ARGC << 1
     lda ARGC_LO
@@ -525,61 +577,44 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; ""
     jsr ZSTRING_AX_INIT_DISK_COMMAND_TEXT               ; A+ X- Y- AX+
 
-    ; Skip any space and no-break space
-    from
-        ldy # 0
-    loop
-        inc DL
-        lda [DX],y
-        if_eq_then
-            ; Empty string
-            sec                                         ; FAIL
-            rts
-        else_end
-    next
-        cmp # PETSCII_SPACE
-        beq _loop                                       ; continue
-        cmp # PETSCII_NO_BREAK_SPACE
-        beq _loop                                       ; continue
-    end
-    ; Y = 0 ; A = [DX] != NUL
+    ; Skip blanks
+    jsr SKIP_BLANKS                                 ; A+ X- Y=0 DL+
 
+    ; A = [DX]
+
+    ; check Y = 0
+    ; check A != NUL and A != SPACE and A != NO_BREAK_SPACE
+    ; A may be QUOTATION_MARK
+
+    pha
+        cmp # PETSCII_QUOTATION_MARK
+        if_eq_then
+            inc DL
+        else_end
+
+        ; BX := DX
+        lda DL
+        sta BL
+        lda DH
+        sta BH
+    pla
     cmp # PETSCII_QUOTATION_MARK
     if_eq_then
-        from_loop COPY_QUOTED
-            inc DL
-            ldy # 0
-            lda [DX],y
-            beq COPY_QUOTED::_end                       ; bra
-            cmp # PETSCII_QUOTATION_MARK
-            if_eq_then
-                inc DL
-                bne COPY_QUOTED::_end                   ; break
-            else_end
-
-            jsr ZSTRING_AX_APPEND_CHAR_A                ; A+ X- Y+
-        next
-            jmp COPY_QUOTED::_loop                      ; bra
-        end
-
-        clc                                             ; OK
-        rts
-    else_end
-
-    ; A = [DX] is not NUL, QUOTATION_MARK
-    from_loop COPY_UNQUOTED
-        ldy # 0
-        lda [DX],y
-        beq COPY_UNQUOTED::_end                         ; break
-        cmp # PETSCII_SPACE
-        beq _end                                        ; break
-        cmp # PETSCII_NO_BREAK_SPACE
-        beq _end                                        ; break
-        jsr ZSTRING_AX_APPEND_CHAR_A                    ; A+ X- Y+
-    next
-        inc DL
-        bne _loop                                       ; bra
+        jsr SKIP_QUOTED                             ; A+ X- Y- Z1 DL+
+        beq _end                                    ; bra
+    else
+        jsr SKIP_UNQUOTED                           ; A+ X- Y- Z+ DL+
     end
+
+    cmp # PETSCII_NUL
+    if_ne_then
+        ; A = SPACE or A = NO_BREAK_SPACE or A = QUOTATION_MARK
+        lda # PETSCII_NUL
+        sta [DX],y
+        inc DL
+    else_end
+ 
+    jsr ZSTRING_BX_COPY_TO_ZSTRING_AX                   ; A+ X- Y+
 
     clc                                                 ; OK
 
