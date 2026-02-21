@@ -10,7 +10,7 @@ Commodore 64 Shell
 | `l` | List directory of work disk. Pause with SHIFT key. |
 | `ls` | List directory of system disk. Pause with SHIFT key. |
 | `mv FROM TO` | Move (rename) a file. |
-| `pr FILE` | Print (cat, type) contents of a file. |
+| `cat FILE` | Print (cat, type) contents of a file. |
 | `rm FILE` | Remove (delete or scratch) a file. |
 | `disk COMMAND` | Send command to work disk. |
 | `load PROGRAM` | Load, but do not execute, program. |
