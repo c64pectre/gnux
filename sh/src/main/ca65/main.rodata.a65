@@ -18,170 +18,167 @@
 
 ;region Resource strings
 
-    RESOURCE_STRING_COMMAND_NOT_FOUND:
-        .asciiz "command not found"
+RESOURCE_STRING_COMMAND_NOT_FOUND:
+    .asciiz "command not found"
 
-    RESOURCE_STRING_CANT_OPEN_INPUT_FILE:
-        .asciiz "can't open input file"
+RESOURCE_STRING_CANT_OPEN_INPUT_FILE:
+    .asciiz "can't open input file"
 
-    RESOURCE_STRING_CANT_OPEN_OUTPUT_FILE:
-        .asciiz "can't open output file"
+RESOURCE_STRING_CANT_OPEN_OUTPUT_FILE:
+    .asciiz "can't open output file"
 
-    RESOURCE_STRING_PRINTER_NOT_PRESENT:
-        .asciiz "printer not present"
+RESOURCE_STRING_PRINTER_NOT_PRESENT:
+    .asciiz "printer not present"
 
-    RESOURCE_STRING_DEVICE_NOT_PRESENT:
-        .asciiz "device not present"
+RESOURCE_STRING_DEVICE_NOT_PRESENT:
+    .asciiz "device not present"
 
-    RESOURCE_STRING_INCORRECT_ARGUMENTS:
-        .asciiz "incorrect (number of) argument(s)"
+RESOURCE_STRING_INCORRECT_ARGUMENTS:
+    .asciiz "incorrect (number of) argument(s)"
 
-    RESOURCE_STRING_DRIVE_NOT_PRESENT:
-        .asciiz "drive not present"
+RESOURCE_STRING_DRIVE_NOT_PRESENT:
+    .asciiz "drive not present"
 
-    RESOURCE_STRING_FILE_NAME_TOO_LONG:
-        .asciiz "file name too long"
+RESOURCE_STRING_FILE_NAME_TOO_LONG:
+    .asciiz "file name too long"
 
-    RESOURCE_STRING_ALREADY_REDIRECTING_INPUT:
-        .asciiz "already redirecting input"
+RESOURCE_STRING_ALREADY_REDIRECTING_INPUT:
+    .asciiz "already redirecting input"
 
-    RESOURCE_STRING_ALREADY_REDIRECTING_OUTPUT:
-        .asciiz "already redirecting output"
+RESOURCE_STRING_ALREADY_REDIRECTING_OUTPUT:
+    .asciiz "already redirecting output"
 
-    RESOURCE_STRING_WRONG_DEVICE:
-        .asciiz "require device 8-31"
+RESOURCE_STRING_WRONG_DEVICE:
+    .asciiz "require device 8-31"
 
-    RESOURCE_STRING_WRONG_DRIVE:
-        .asciiz "require drive 0-1"
+RESOURCE_STRING_WRONG_DRIVE:
+    .asciiz "require drive 0-1"
 
-    RESOURCE_STRING_DISK_COMMAND_MEMORY_READ:
-        .asciiz   "m-r"
+RESOURCE_STRING_DISK_COMMAND_MEMORY_READ:
+    .asciiz   "m-r"
 
-    RESOURCE_STRING_DOT_SH:
-        .asciiz ".sh"
+RESOURCE_STRING_DOT_SH:
+    .asciiz ".sh"
 
-    RESOURCE_ZSTRING_PROMPT:
-        .asciiz "$ "
+RESOURCE_ZSTRING_PROMPT:
+    .asciiz "$ "
 
-    RESOURCE_ZSTRING_DEVICE:
-        .asciiz "device: "
+RESOURCE_ZSTRING_DEVICE:
+    .asciiz "device: "
 
-    RESOURCE_ZSTRING_DRIVE:
-        .asciiz " drive: "
+RESOURCE_ZSTRING_DRIVE:
+    .asciiz " drive: "
 
-    RESOURCE_ZSTRING_SEQ_WRITE:
-        .asciiz ",s,w"
+RESOURCE_ZSTRING_SEQ_WRITE:
+    .asciiz ",s,w"
 
-    RESOURCE_STRING_EMPTY:
-        .asciiz ""
+RESOURCE_STRING_EMPTY:
+    .asciiz ""
 
-    ;endregion
+;endregion
 
-;
 ;region Binary to decimal conversion table
 
-    ;;; summary: UWORD to decimal conversion table
-    TABLE_UWORD_TO_DECIMAL_LO:
-            .byte   1       ; [0]
-            .byte   10      ; [1]
-            .byte   100     ; [2]
-            .byte   232     ; [3]
+;;; summary: UWORD to decimal conversion table
+TABLE_UWORD_TO_DECIMAL_LO:
+        .byte   1       ; [0]
+        .byte   10      ; [1]
+        .byte   100     ; [2]
+        .byte   232     ; [3]
 
-    TABLE_UWORD_TO_DECIMAL_HI:
-            .byte   0       ; [0]
-            .byte   0       ; [1]
-            .byte   0       ; [2]
-            .byte   3       ; [3]
+TABLE_UWORD_TO_DECIMAL_HI:
+        .byte   0       ; [0]
+        .byte   0       ; [1]
+        .byte   0       ; [2]
+        .byte   3       ; [3]
 
-    ;endregion
+;endregion
 
-;
 ;region Map Command name to command number
 
-    COMMAND_NAME_EXIT: .asciiz "bye"
-    COMMAND_NAME_LOAD: .asciiz "load"
-    COMMAND_NAME_LS:   .asciiz "ls"
-    COMMAND_NAME_L:    .asciiz "l"
-    COMMAND_NAME_RM:   .asciiz "rm"
-    COMMAND_NAME_MV:   .asciiz "mv"
-    COMMAND_NAME_PR:   .asciiz "pr"
-    COMMAND_NAME_DISK: .asciiz "disk"
-    COMMAND_NAME_WORK: .asciiz "work"
-    COMMAND_NAME_SYS:  .asciiz "sys"
+COMMAND_NAME_EXIT: .asciiz "bye"
+COMMAND_NAME_LOAD: .asciiz "load"
+COMMAND_NAME_LS:   .asciiz "ls"
+COMMAND_NAME_L:    .asciiz "l"
+COMMAND_NAME_RM:   .asciiz "rm"
+COMMAND_NAME_MV:   .asciiz "mv"
+COMMAND_NAME_PR:   .asciiz "pr"
+COMMAND_NAME_DISK: .asciiz "disk"
+COMMAND_NAME_WORK: .asciiz "work"
+COMMAND_NAME_SYS:  .asciiz "sys"
 
-    TABLE_COMMAND_NAME_LO:
-        TABLE_COMMAND_NAME_LO_FIRST:
-        .lobytes COMMAND_NAME_EXIT ; 0 bye
-        .lobytes COMMAND_NAME_LOAD ; 1 load
-        .lobytes COMMAND_NAME_LS   ; 2 ls
-        .lobytes COMMAND_NAME_L    ; 3 l
-        .lobytes COMMAND_NAME_RM   ; 4 rm
-        .lobytes COMMAND_NAME_MV   ; 5 mv
-        .lobytes COMMAND_NAME_PR   ; 6 pr
-        .lobytes COMMAND_NAME_DISK ; 7 disk
-        .lobytes COMMAND_NAME_WORK ; 8 work
-        .lobytes COMMAND_NAME_SYS  ; 9 sys
-        TABLE_COMMAND_NAME_LO_AFTER:
+TABLE_COMMAND_NAME_LO:
+    TABLE_COMMAND_NAME_LO_FIRST:
+    .lobytes COMMAND_NAME_EXIT ; 0 bye
+    .lobytes COMMAND_NAME_LOAD ; 1 load
+    .lobytes COMMAND_NAME_LS   ; 2 ls
+    .lobytes COMMAND_NAME_L    ; 3 l
+    .lobytes COMMAND_NAME_RM   ; 4 rm
+    .lobytes COMMAND_NAME_MV   ; 5 mv
+    .lobytes COMMAND_NAME_PR   ; 6 pr
+    .lobytes COMMAND_NAME_DISK ; 7 disk
+    .lobytes COMMAND_NAME_WORK ; 8 work
+    .lobytes COMMAND_NAME_SYS  ; 9 sys
+    TABLE_COMMAND_NAME_LO_AFTER:
 
-    TABLE_COMMAND_NAME_LO_SIZE = TABLE_COMMAND_NAME_LO_AFTER - TABLE_COMMAND_NAME_LO_FIRST
+TABLE_COMMAND_NAME_LO_SIZE = TABLE_COMMAND_NAME_LO_AFTER - TABLE_COMMAND_NAME_LO_FIRST
 
-    TABLE_COMMAND_NAME_HI:
-        TABLE_COMMAND_NAME_HI_FIRST:
-        .hibytes COMMAND_NAME_EXIT ; 0 COMMAND_NUMBER_BYE  bye
-        .hibytes COMMAND_NAME_LOAD ; 1 COMMAND_NUMBER_LOAD load
-        .hibytes COMMAND_NAME_LS   ; 2 COMMAND_NUMBER_LS   ls
-        .hibytes COMMAND_NAME_L    ; 3 COMMAND_NUMBER_L    l
-        .hibytes COMMAND_NAME_RM   ; 4 COMMAND_NUMBER_RM   rm
-        .hibytes COMMAND_NAME_MV   ; 5 COMMAND_NUMBER_MV   mv
-        .hibytes COMMAND_NAME_PR   ; 6 COMMAND_NUMBER_PR   pr
-        .hibytes COMMAND_NAME_DISK ; 7 COMMAND_NUMBER_DISK disk
-        .hibytes COMMAND_NAME_WORK ; 8 COMMAND_NUMBER_WORK work
-        .hibytes COMMAND_NAME_SYS  ; 9 COMMAND_NUMBER_SYS  sys
-        TABLE_COMMAND_NAME_HI_AFTER:
+TABLE_COMMAND_NAME_HI:
+    TABLE_COMMAND_NAME_HI_FIRST:
+    .hibytes COMMAND_NAME_EXIT ; 0 COMMAND_NUMBER_BYE  bye
+    .hibytes COMMAND_NAME_LOAD ; 1 COMMAND_NUMBER_LOAD load
+    .hibytes COMMAND_NAME_LS   ; 2 COMMAND_NUMBER_LS   ls
+    .hibytes COMMAND_NAME_L    ; 3 COMMAND_NUMBER_L    l
+    .hibytes COMMAND_NAME_RM   ; 4 COMMAND_NUMBER_RM   rm
+    .hibytes COMMAND_NAME_MV   ; 5 COMMAND_NUMBER_MV   mv
+    .hibytes COMMAND_NAME_PR   ; 6 COMMAND_NUMBER_PR   pr
+    .hibytes COMMAND_NAME_DISK ; 7 COMMAND_NUMBER_DISK disk
+    .hibytes COMMAND_NAME_WORK ; 8 COMMAND_NUMBER_WORK work
+    .hibytes COMMAND_NAME_SYS  ; 9 COMMAND_NUMBER_SYS  sys
+    TABLE_COMMAND_NAME_HI_AFTER:
 
-    TABLE_COMMAND_NAME_HI_SIZE = TABLE_COMMAND_NAME_HI_AFTER - TABLE_COMMAND_NAME_HI_FIRST
+TABLE_COMMAND_NAME_HI_SIZE = TABLE_COMMAND_NAME_HI_AFTER - TABLE_COMMAND_NAME_HI_FIRST
 
-            .assert TABLE_COMMAND_NAME_LO_SIZE = TABLE_COMMAND_NAME_HI_SIZE , error
+        .assert TABLE_COMMAND_NAME_LO_SIZE = TABLE_COMMAND_NAME_HI_SIZE , error
 
-    TABLE_COMMAND_NAME_SIZE = TABLE_COMMAND_NAME_LO_SIZE
+TABLE_COMMAND_NAME_SIZE = TABLE_COMMAND_NAME_LO_SIZE
 
-    TABLE_COMMAND_HANDLER_LO:
-        .lobytes CMD_BYE  ; 0 COMMAND_NUMBER_BYE
-        .lobytes CMD_LOAD ; 1 COMMAND_NUMBER_LOAD
-        .lobytes CMD_LS   ; 2 COMMAND_NUMBER_LS
-        .lobytes CMD_L    ; 3 COMMAND_NUMBER_L
-        .lobytes CMD_RM   ; 4 COMMAND_NUMBER_RM
-        .lobytes CMD_MV   ; 5 COMMAND_NUMBER_MV
-        .lobytes CMD_PR   ; 6 COMMAND_NUMBER_PR
-        .lobytes CMD_DISK ; 7 COMMAND_NUMBER_DISK
-        .lobytes CMD_WORK ; 8 COMMAND_NUMBER_WORK
-        .lobytes CMD_SYS  ; 9 COMMAND_NUMBER_SYS
-        TABLE_COMMAND_HANDLER_LO_AFTER:
+TABLE_COMMAND_HANDLER_LO:
+    .lobytes CMD_BYE  ; 0 COMMAND_NUMBER_BYE
+    .lobytes CMD_LOAD ; 1 COMMAND_NUMBER_LOAD
+    .lobytes CMD_LS   ; 2 COMMAND_NUMBER_LS
+    .lobytes CMD_L    ; 3 COMMAND_NUMBER_L
+    .lobytes CMD_RM   ; 4 COMMAND_NUMBER_RM
+    .lobytes CMD_MV   ; 5 COMMAND_NUMBER_MV
+    .lobytes CMD_PR   ; 6 COMMAND_NUMBER_PR
+    .lobytes CMD_DISK ; 7 COMMAND_NUMBER_DISK
+    .lobytes CMD_WORK ; 8 COMMAND_NUMBER_WORK
+    .lobytes CMD_SYS  ; 9 COMMAND_NUMBER_SYS
+    TABLE_COMMAND_HANDLER_LO_AFTER:
 
-    TABLE_COMMAND_HANDLER_LO_SIZE = TABLE_COMMAND_HANDLER_LO_AFTER - TABLE_COMMAND_HANDLER_LO
+TABLE_COMMAND_HANDLER_LO_SIZE = TABLE_COMMAND_HANDLER_LO_AFTER - TABLE_COMMAND_HANDLER_LO
 
-    TABLE_COMMAND_HANDLER_HI:
-        .hibytes CMD_BYE  ; 0 COMMAND_NUMBER_BYE
-        .hibytes CMD_LOAD ; 1 COMMAND_NUMBER_LOAD
-        .hibytes CMD_LS   ; 2 COMMAND_NUMBER_LS
-        .hibytes CMD_L    ; 3 COMMAND_NUMBER_L
-        .hibytes CMD_RM   ; 4 COMMAND_NUMBER_RM
-        .hibytes CMD_MV   ; 5 COMMAND_NUMBER_MV
-        .hibytes CMD_PR   ; 6 COMMAND_NUMBER_PR
-        .hibytes CMD_DISK ; 7 COMMAND_NUMBER_DISK
-        .hibytes CMD_WORK ; 8 COMMAND_NUMBER_WORK
-        .hibytes CMD_SYS  ; 9 COMMAND_NUMBER_SYS
-        TABLE_COMMAND_HANDLER_HI_AFTER:
+TABLE_COMMAND_HANDLER_HI:
+    .hibytes CMD_BYE  ; 0 COMMAND_NUMBER_BYE
+    .hibytes CMD_LOAD ; 1 COMMAND_NUMBER_LOAD
+    .hibytes CMD_LS   ; 2 COMMAND_NUMBER_LS
+    .hibytes CMD_L    ; 3 COMMAND_NUMBER_L
+    .hibytes CMD_RM   ; 4 COMMAND_NUMBER_RM
+    .hibytes CMD_MV   ; 5 COMMAND_NUMBER_MV
+    .hibytes CMD_PR   ; 6 COMMAND_NUMBER_PR
+    .hibytes CMD_DISK ; 7 COMMAND_NUMBER_DISK
+    .hibytes CMD_WORK ; 8 COMMAND_NUMBER_WORK
+    .hibytes CMD_SYS  ; 9 COMMAND_NUMBER_SYS
+    TABLE_COMMAND_HANDLER_HI_AFTER:
 
-    TABLE_COMMAND_HANDLER_HI_SIZE = TABLE_COMMAND_HANDLER_HI_AFTER - TABLE_COMMAND_HANDLER_HI
+TABLE_COMMAND_HANDLER_HI_SIZE = TABLE_COMMAND_HANDLER_HI_AFTER - TABLE_COMMAND_HANDLER_HI
 
-            .assert TABLE_COMMAND_HANDLER_LO_SIZE = TABLE_COMMAND_HANDLER_HI_SIZE , error
+        .assert TABLE_COMMAND_HANDLER_LO_SIZE = TABLE_COMMAND_HANDLER_HI_SIZE , error
 
-    TABLE_COMMAND_HANDLER_SIZE = TABLE_COMMAND_HANDLER_LO_SIZE
+TABLE_COMMAND_HANDLER_SIZE = TABLE_COMMAND_HANDLER_LO_SIZE
 
-    ;endregion
+;endregion
 
-;
 ;region Table error messages
 
 TABLE_ERROR_MESSAGE_LO:
@@ -220,5 +217,3 @@ TABLE_ERROR_MESSAGE_HI_SIZE = TABLE_ERROR_MESSAGE_HI_AFTER - TABLE_ERROR_MESSAGE
 TABLE_ERROR_MESSAGE_SIZE = TABLE_ERROR_MESSAGE_LO_SIZE
 
 ;endregion
-
-;region Resource strings
