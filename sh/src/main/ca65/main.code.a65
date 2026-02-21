@@ -1556,7 +1556,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Print (cat) file
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+ DX+
-.proc CMD_PR
+.proc CMD_CAT
     lda ARGC_LO
     cmp # 2
     if_ne_then

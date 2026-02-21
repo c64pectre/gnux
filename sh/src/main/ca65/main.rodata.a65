@@ -102,7 +102,7 @@ COMMAND_NAME_LS:   .asciiz "ls"
 COMMAND_NAME_L:    .asciiz "l"
 COMMAND_NAME_RM:   .asciiz "rm"
 COMMAND_NAME_MV:   .asciiz "mv"
-COMMAND_NAME_PR:   .asciiz "pr"
+COMMAND_NAME_CAT:   .asciiz "pr"
 COMMAND_NAME_DISK: .asciiz "disk"
 COMMAND_NAME_WORK: .asciiz "work"
 COMMAND_NAME_SYS:  .asciiz "sys"
@@ -115,7 +115,7 @@ TABLE_COMMAND_NAME_LO:
     .lobytes COMMAND_NAME_L    ; 3 l
     .lobytes COMMAND_NAME_RM   ; 4 rm
     .lobytes COMMAND_NAME_MV   ; 5 mv
-    .lobytes COMMAND_NAME_PR   ; 6 pr
+    .lobytes COMMAND_NAME_CAT  ; 6 cat
     .lobytes COMMAND_NAME_DISK ; 7 disk
     .lobytes COMMAND_NAME_WORK ; 8 work
     .lobytes COMMAND_NAME_SYS  ; 9 sys
@@ -131,7 +131,7 @@ TABLE_COMMAND_NAME_HI:
     .hibytes COMMAND_NAME_L    ; 3 COMMAND_NUMBER_L    l
     .hibytes COMMAND_NAME_RM   ; 4 COMMAND_NUMBER_RM   rm
     .hibytes COMMAND_NAME_MV   ; 5 COMMAND_NUMBER_MV   mv
-    .hibytes COMMAND_NAME_PR   ; 6 COMMAND_NUMBER_PR   pr
+    .hibytes COMMAND_NAME_CAT  ; 6 COMMAND_NUMBER_CAT  cat
     .hibytes COMMAND_NAME_DISK ; 7 COMMAND_NUMBER_DISK disk
     .hibytes COMMAND_NAME_WORK ; 8 COMMAND_NUMBER_WORK work
     .hibytes COMMAND_NAME_SYS  ; 9 COMMAND_NUMBER_SYS  sys
@@ -150,7 +150,7 @@ TABLE_COMMAND_HANDLER_LO:
     .lobytes CMD_L    ; 3 COMMAND_NUMBER_L
     .lobytes CMD_RM   ; 4 COMMAND_NUMBER_RM
     .lobytes CMD_MV   ; 5 COMMAND_NUMBER_MV
-    .lobytes CMD_PR   ; 6 COMMAND_NUMBER_PR
+    .lobytes CMD_CAT  ; 6 COMMAND_NUMBER_CAT
     .lobytes CMD_DISK ; 7 COMMAND_NUMBER_DISK
     .lobytes CMD_WORK ; 8 COMMAND_NUMBER_WORK
     .lobytes CMD_SYS  ; 9 COMMAND_NUMBER_SYS
@@ -165,7 +165,7 @@ TABLE_COMMAND_HANDLER_HI:
     .hibytes CMD_L    ; 3 COMMAND_NUMBER_L
     .hibytes CMD_RM   ; 4 COMMAND_NUMBER_RM
     .hibytes CMD_MV   ; 5 COMMAND_NUMBER_MV
-    .hibytes CMD_PR   ; 6 COMMAND_NUMBER_PR
+    .hibytes CMD_CAT  ; 6 COMMAND_NUMBER_CAT
     .hibytes CMD_DISK ; 7 COMMAND_NUMBER_DISK
     .hibytes CMD_WORK ; 8 COMMAND_NUMBER_WORK
     .hibytes CMD_SYS  ; 9 COMMAND_NUMBER_SYS
