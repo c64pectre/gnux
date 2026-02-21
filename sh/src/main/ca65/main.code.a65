@@ -2332,7 +2332,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   DX: Address of souroutine
 .proc JSR_INDIRECT_DX
     jmp [DX]
-    rts
 .endproc
 
 ;endregion
