@@ -55,14 +55,12 @@ AREA_4_SIZE =  AREA_4_LAST - AREA_4 + 1
 
 ; Begin of ABI (Application Binary Interface)
 
-SYS_DEVICE             := AREA_3 + 0        ; $0334 ; $17FA
-SYS_DRIVE              := AREA_3 + 1        ; $0335 ; $17FB
-WORK_DEVICE            := AREA_3 + 2        ; $0336 ; $17FC
-WORK_DRIVE             := AREA_3 + 3        ; $0337 ; $17FD
-REDIRECT_INPUT_ACTIVE  := AREA_3 + 4        ; $0338 ; $17FE ; 0 = no , 1 = yes
-REDIRECT_OUTPUT_ACTIVE := AREA_3 + 5        ; $0339 ; $17FF ; 0 = no , 1 = yes
-IN_FA                  := AREA_3 + 6        ; $033A ; 0 = keyboard
-OUT_FA                 := AREA_3 + 7        ; $033B ; 0 = screen
+SYS_DEVICE             := AREA_3 + 0        ; $0334
+WORK_DEVICE            := AREA_3 + 1        ; $0335
+REDIRECT_INPUT_ACTIVE  := AREA_3 + 2        ; $0336 ; 0 = no , 1 = yes
+REDIRECT_OUTPUT_ACTIVE := AREA_3 + 3        ; $0337 ; 0 = no , 1 = yes
+IN_FA                  := AREA_3 + 4        ; $0338 ; 0 = keyboard
+OUT_FA                 := AREA_3 + 5        ; $0339 ; 0 = screen
 
 ; ARGC: Argument count
 ARGC                   := AREA_4 + 0        ; $033C
@@ -122,10 +120,6 @@ ARGV_9_HI := ARGV_9 + 1                     ; $0353 ; AREA_4 + 23
 ; String buffer for disk command, directory, file. Need 40 bytes + 1 for NUL.
 DISK_COMMAND_LENGTH = 41
 DISK_COMMAND_TEXT              := AREA_4 + 24 + 19
-DISK_COMMAND_TEXT_COMMAND      := DISK_COMMAND_TEXT + 0
-DISK_COMMAND_TEXT_DRIVE        := DISK_COMMAND_TEXT + 1
-DISK_COMMAND_TEXT_NUL_OR_COLON := DISK_COMMAND_TEXT + 2
-DISK_COMMAND_TEXT_PATTERN      := DISK_COMMAND_TEXT + 3
 
 ; Disk status Max is 35 bytes
 DISK_STATUS_LENGTH = 35
@@ -210,11 +204,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         sta SYS_DEVICE
         sta WORK_DEVICE
     else_end
-
-    ; Set system and work drive to 0, i.e. single side, or upper side of double sided drive.
-    lda # DEFAULT_DRIVE
-    sta SYS_DRIVE
-    sta WORK_DRIVE
 
     ; PARGV = &ARGV
     lda # < ARGV
@@ -524,27 +513,17 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; summary: Get (extract) file name from `COMMAND_LINE` from position `DX`, prefixed with work drive and colon.
+;;; summary: Get (extract) file name from `COMMAND_LINE` from position `DX`.
 ;;; in:
 ;;;   DX: Pointer in command line, initially to the '>'. Advanced to after
 ;;; out:
 ;;;   AX = DISK_COMMAND_TEXT ZSTRING file name unquoted may be zero empty
 ;;; changed: A+ X- Y+ AX+ DX+
-.proc GET_FILE_NAME_FROM_COMMAND_LINE_FOR_WORK_DRIVE
+.proc GET_FILE_NAME_FROM_COMMAND_LINE
     ; [DX] is not NUL, SPACE, NO_BREAK_SPACE, PETSCII_LESS_THAN_SIGN, PETSCII_GREATER_THAN_SIGN
 
     ; ""
     jsr ZSTRING_AX_INIT_DISK_COMMAND_TEXT               ; A+ X- Y- AX+
-
-    ; + DRIVE
-    lda WORK_DRIVE
-    clc
-    adc # PETSCII_DIGIT_ZERO
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
-
-    ; + ":"
-    lda # PETSCII_COLON
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
 
     ; Skip any space and no-break space
     from
@@ -629,7 +608,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    jsr GET_FILE_NAME_FROM_COMMAND_LINE_FOR_WORK_DRIVE  ; A+ X- Y+ AX+
+    jsr GET_FILE_NAME_FROM_COMMAND_LINE  ; A+ X- Y+ AX+
     if_cs_then
         rts
     else_end
@@ -664,7 +643,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     ; AX := FILE
-    jsr GET_FILE_NAME_FROM_COMMAND_LINE_FOR_WORK_DRIVE  ; A+ X- Y+ AX+ DX+
+    jsr GET_FILE_NAME_FROM_COMMAND_LINE  ; A+ X- Y+ AX+ DX+
     if_cs_then
         ; FAIL
         rts
@@ -850,13 +829,11 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK
     ; Try work disk
     ldx WORK_DEVICE
-    ldy WORK_DRIVE
     jsr LOAD_PROGRAM
     if_cs_then
         ; Load from work disk failed.
         ; Try system disk
         ldx SYS_DEVICE
-        ldy SYS_DRIVE
         jsr LOAD_PROGRAM
         if_cs_then
             ; Load from system disk failed too.
@@ -883,26 +860,15 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Load program
 ;;; in:
 ;;;   X: DEVICE
-;;;   Y: DRIVE
 ;;;   BX: COMMAND
-;;; changed: A+ X+ Y+ AX+ CX+ DX+
+;;; changed: A+ X+ Y+ AX+ CX+ DL+
 ;;; notes:
 ;;;   BX is not changed because caller may want to save the file name if loaded.
 .proc LOAD_PROGRAM
     stx DL                                              ; DL = X = DEVICE
-    sty DH                                              ; DH = Y = DRIVE
 
     ; AX := ""
     jsr ZSTRING_AX_INIT_DISK_COMMAND_TEXT               ; A+ X- Y- AX+
-    ; + DRIVE
-    lda DH                                              ; A = DL = DRIVE
-    clc
-    adc # PETSCII_DIGIT_ZERO
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
-
-    ; + ":"
-    lda # PETSCII_COLON
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
 
     ; + COMMAND
     jsr ZSTRING_AX_APPEND_ZSTRING_BX_USING_CX           ; A+ X- Y+ DX+
@@ -1074,14 +1040,12 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;region Implementation of work and sys
 
-;;; summary: Print device number in `X` (could be 8-30, so need 1 or 2 positions) and drive number in `Y' (0 or 1), and reset file I/O.
+;;; summary: Print device number in `X`
 ;;; in:
 ;;;   X: Device
-;;;   Y: Drive
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+
-.proc OUT_DEVICE_DRIVE
+.proc OUT_DEVICE
     stx CL                                              ; CL = DEVICE
-    sty CH                                              ; CH = DRIVE
 
     ldx # < RESOURCE_ZSTRING_DEVICE
     ldy # > RESOURCE_ZSTRING_DEVICE
@@ -1090,32 +1054,21 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda CL                                              ; A = CL = DEVICE
     jsr OUT_PUT_DECIMAL_UBYTE_A                         ; A+ X+ Y- AL+ BX+
 
-    ldx # < RESOURCE_ZSTRING_DRIVE
-    ldy # > RESOURCE_ZSTRING_DRIVE
-    jsr OUT_PUT_STRING_ZSTRING_XY
-
-    lda CH                                              ; A = CL = DRIVE
-    jsr OUT_PUT_DECIMAL_UBYTE_A                         ; A+ X+ Y- AL+ BX+
-
     lda # PETSCII_RETURN
     jsr KERNAL_CHROUT
 
     rts
 .endproc
 
-;;; summary: Get device and drive number from string at ARGV_1 and ensure device is present.
+;;; summary: Get device from ARGV[1] and ensure device is present.
 ;;; in:
-;;;   ARGV_1: String
+;;;   ARGV[1]: ZSTRING: Device
 ;;; out:
 ;;;   X:  Device number: 8-31
-;;;   Y:  Drive number: 0-1
 ;;;   C: 0=OK 1=FAIL
 ;;; changed:
-;;;   A+ X+ Y+ AX+ BX+ CX+
-;;; notes:
-;;;   We test only if the device is present, not the drive.
-;;;   This is because it is not possible to test if a drive is present (without a readable disk being present).
-.proc CHANGE_DEVICE_DRIVE
+;;;   A+ X+ Y+ AX+ BX+ CL+
+.proc CHANGE_DEVICE
     ; DEVICE = ARGV[1]
     lda # 1
     jsr GET_BX_PARGV_INDEX_A
@@ -1134,20 +1087,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     sta CL                                              ; CL = A = DEVICE
 
-    ; DRIVE = ARGV[2]
-    lda # 2
-    jsr GET_BX_PARGV_INDEX_A
-    jsr ZTRING_BX_DECIMAL_TO_UBYTE_A                    ; A+ X- Y+ BX+
-    cmp # DEVICE_DISK_DRIVE_MAX + 1
-    if_ge_then
-        ldx # ERROR_NUMBER_WRONG_DRIVE
-        jsr OUT_ERROR_X_NUMBER                          ; C = 1
-
-        rts                                             ; FAIL
-    else_end
-
-    sta CH                                              ; CH = A = DRIVE
-
     ; Test if device present by sending Memory Read command.
     lda # < RESOURCE_STRING_DISK_COMMAND_MEMORY_READ
     sta AL
@@ -1162,14 +1101,14 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr KERNAL_CLOSE                                ; A+ X+ Y+ C=0
     plp
     if_cs_then
-        ldx # ERROR_NUMBER_DRIVE_NOT_PRESENT
+        ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
         jsr OUT_ERROR_X_NUMBER                          ; C = 1
         rts                                             ; FAIL
     else_end
 
     ; Device is present
     ldx CL                                              ; X = CL = DEVICE
-    ldy CH                                              ; Y = CH = DRIVE
+
     ; C=0 OK
 
     rts
@@ -1228,14 +1167,12 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 .proc CMD_LS
     ldx SYS_DEVICE
-    ldy SYS_DRIVE
     jsr CMD_DIR
     rts
 .endproc
 
 .proc CMD_L
     ldx WORK_DEVICE
-    ldy WORK_DRIVE
     jsr CMD_DIR
     rts
 .endproc
@@ -1243,7 +1180,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Command: directory listing of work or system disk
 ;;; in:
 ;;;   X: DEVICE (8-31)
-;;;   Y: DRIVE (0-1)
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+ DX+
 .proc CMD_DIR
     lda ARGC_LO
@@ -1255,20 +1191,13 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     stx DL                                              ; DL = X = DEVICE
-    sty DH                                              ; DH = Y = DRIVE
 
-    ; AX := "" + "$" + DRIVE
+    ; AX := "" + "$"
     ; ""
     jsr ZSTRING_AX_INIT_DISK_COMMAND_TEXT               ; A+ X- Y- AX+
 
     ; + "$"
     lda # PETSCII_DOLLAR
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
-
-    ; + DRIVE
-    lda DH                                              ; A = DH = DRIVE
-    clc
-    adc # PETSCII_DIGIT_ZERO
     jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
 
     lda ARGC_LO
@@ -1433,12 +1362,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # PETSCII_LATIN_LETTER_S
     jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
 
-    ; + DRIVE
-    clc
-    lda WORK_DRIVE
-    adc # PETSCII_DIGIT_ZERO
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
-
     ; + ":"
     lda # PETSCII_COLON
     jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
@@ -1492,12 +1415,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; + "r"
     lda # PETSCII_LATIN_LETTER_R
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
-
-    ; + DRIVE
-    clc
-    lda WORK_DRIVE
-    adc # PETSCII_DIGIT_ZERO
     jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
 
     ; + ":"
@@ -1582,16 +1499,6 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; ""
     jsr ZSTRING_AX_INIT_DISK_COMMAND_TEXT               ; A+ X- Y- AX+
 
-    ; + DRIVE
-    clc
-    lda WORK_DRIVE
-    adc # PETSCII_DIGIT_ZERO
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
-
-    ; + ":"
-    lda # PETSCII_COLON
-    jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
-
     ; + FILE
     jsr ZSTRING_AX_APPEND_ZSTRING_BX_USING_CX           ; A+ X- Y+ CX+
 
@@ -1633,13 +1540,12 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     if_eq_then
         ; Show
         ldx WORK_DEVICE
-        ldy WORK_DRIVE
-        jsr OUT_DEVICE_DRIVE
+        jsr OUT_DEVICE
 
         rts
     else_end
 
-    cmp # 3
+    cmp # 2
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
         jsr OUT_ERROR_X_NUMBER
@@ -1648,11 +1554,10 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     ; Change
-    jsr CHANGE_DEVICE_DRIVE                             ; A+ X+ Y+ AX+ BX+
+    jsr CHANGE_DEVICE                                   ; A+ X+ Y+ AX+ BX+
     if_cc_then
         ; Change went OK
         stx WORK_DEVICE
-        sty WORK_DRIVE
     else_end
 
     rts
@@ -1665,13 +1570,12 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     if_eq_then
         ; Show
         ldx SYS_DEVICE
-        ldy SYS_DRIVE
-        jsr OUT_DEVICE_DRIVE
+        jsr OUT_DEVICE
 
         rts
     else_end
 
-    cmp # 3
+    cmp # 2
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
         jsr OUT_ERROR_X_NUMBER
@@ -1680,11 +1584,10 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     ; Change
-    jsr CHANGE_DEVICE_DRIVE                             ; A+ X+ Y+ AX+ BX+
+    jsr CHANGE_DEVICE                                   ; A+ X+ Y+ AX+ BX+
     if_cc_then
         ; Change went OK
         stx SYS_DEVICE
-        sty SYS_DRIVE
     else_end
 
     rts

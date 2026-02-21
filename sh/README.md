@@ -15,8 +15,8 @@ Commodore 64 Shell
 | `disk COMMAND` | Send command to work disk. |
 | `load PROGRAM` | Load, but do not execute, program. |
 | `PROGRAM args...` | Load, if not already done so, and execute program. |
-| `work DEVICE DRIVE` | Without arguments, show current work disk device and drive. With arguments: change work disk device (8-30) and drive (0-1). Default: 8 and 0. |
-| `sys DEVICE DRIVE` | Without arguments, show current system disk device and drive. With arguments: change system disk device (8 -30) and drive (0-1). Default: 8 and 0. |
+| `work DEVICE` | Without arguments, show current work disk device . With argument: change work disk device (8-30). Default is boot device. |
+| `sys DEVICE` | Without arguments, show current system disk device. With argument: change system disk device (8 -30). Default is boot device. |
 
 When loading a command/program, the work disk is tried first, then the system disk.
 
