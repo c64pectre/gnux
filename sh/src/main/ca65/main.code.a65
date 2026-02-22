@@ -1074,8 +1074,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     php
     lda # DISK_COMMAND_FA
         jsr KERNAL_CLOSE                                ; A+ X+ Y+ C+
-
-        jsr KERNAL_CLRCHN                               ; A+ X+ Y- C+
+        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
     plp
 
     rts
@@ -1119,7 +1118,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Last chrin causes EOI and C=1
 
-    jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C1
+    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
     jsr CHECK_DISK_STATUS                               ; A+ X- Y- C+
 
@@ -1277,7 +1276,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     jsr OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_AX
 
-    jsr KERNAL_CLRCHN									; Necessary
+    ; Necessary
+    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
     ldx WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW | PROCESS_DISK_STATUS_ALWAYS
@@ -1329,7 +1329,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     jsr OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_AX
 
-    jsr KERNAL_CLRCHN									; Necessary
+    ; Necessary
+    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
     ldx WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
@@ -1400,7 +1401,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; FROM
     jsr OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_AX
 
-    jsr KERNAL_CLRCHN									; Necessary
+    ; Necessary
+    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
     ldx WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
@@ -1453,7 +1455,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
     jsr REDIRECTING_STREAM_COPY_IN_TO_OUT
 
@@ -1981,11 +1983,11 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     pla
     if_cc_then
         sta IN_FA
-        dec IN_ACTIVE                          ; TRUE
+        dec IN_ACTIVE                                   ; TRUE
     else_end
 
     php
-        jsr KERNAL_CLRCHN                               ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
     plp
 
     rts
@@ -2008,11 +2010,11 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     pla
     if_cc_then
         sta IN_FA
-        dec IN_ACTIVE                          ; TRUE
+        dec IN_ACTIVE                                   ; TRUE
     else_end
 
     php
-        jsr KERNAL_CLRCHN                               ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
     plp
 
     clc                                                 ; OK
@@ -2047,11 +2049,11 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     pla
     if_cc_then
         sta OUT_FA
-        dec OUT_ACTIVE                         ; TRUE
+        dec OUT_ACTIVE                                  ; TRUE
     else_end
 
     php
-        jsr KERNAL_CLRCHN                               ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
     plp
 
     rts
@@ -2082,7 +2084,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; May fail on write buffered character
 
     php
-        jsr KERNAL_CLRCHN
+        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
     plp
 
     rts
@@ -2100,17 +2102,25 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     next
         jmp _loop
     end
-    jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
     ; Redirect input & output inactive
     lda # FALSE                                         ; A = FALSE = 0
-    sta IN_ACTIVE                              ; Redirect input inactive
-    sta OUT_ACTIVE                             ; Redirect output inactive
+    sta IN_ACTIVE
+    sta OUT_ACTIVE
     sta IN_FA                                           ; 0 = Keyboard
     sta OUT_FA                                          ; 0 = Screen
 
     lda # 0
     sta ZPKERNAL_STATUS
+
+    rts
+.endproc
+
+;;; summary: Clear IN and OUT channel
+;;; changed: A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+.proc CLRCHN
+    jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
     rts
 .endproc
@@ -2172,35 +2182,6 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     jsr IN_GET_NON_REDIRECTING_BYTE_A
-
-    rts
-.endproc
-
-;;; summary: Read line from input channel input channel (IN), replacing the RETURN with a NUL, with redirection and error handling.
-;;; in:
-;;;   X#Y: POINTER TO BYTE
-;;; out:
-;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+ AX+
-.proc IN_READ_LINE_XY_USING_AX
-    stx AL
-    sty AH
-    from
-        ldy # 0
-    loop
-        jsr IN_GET_REDIRECTING_BYTE_A                   ; A+ X+ Y- C+
-        bcs _end                                        ; FAIL -> break
-        sta [AX],y
-        cmp # PETSCII_RETURN
-        beq _end
-    next
-        iny
-        bne _loop
-    end
-
-    ; Replace RETURN with NUL
-    lda # PETSCII_NUL
-    sta [AX],y
 
     rts
 .endproc
