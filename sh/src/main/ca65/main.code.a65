@@ -2093,6 +2093,7 @@ BUFFERED_OUTPUT_STREAM_CURSOR   := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;    v.s. up to 2000 cycles or more.
 ;;;   Source value is destroyed (becomes zero).
 ;;;   Disables interrupts because it uses Decimal mode.
+;;;   Reference: book "6502 Instruction Set Guide" written by  Andrew John Jacobs and edited by Dion Olsthoorn, October 2021, chapter "Coding Algorithms", section "Decimal Arithmetic", pp. 27.
 .proc AX_UWORD_TO_DECIMAL_AX_BX_CX
     ; Zero out result
     ldy # 0
