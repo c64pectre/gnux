@@ -9,4 +9,4 @@ set PMP_PACKAGER=d64
 set PMP_PACKAGER_DXX_ADDITIONAL_WRITES=
 
 set PMP_RUNNER=x64sc
-set PMP_RUNNER_X64SC_OPTIONS=-drive8type 1541 -moncommands .\boot\target\boot.vice-labels -moncommands .\sh\target\sh.vice-labels -moncommands %VICE_LIB%\c64-kernal-r3-serial.vice-labels
+set PMP_RUNNER_X64SC_OPTIONS=+confirmonexit +saveres -model c64 -jamaction 2 -drive8type 1541 -drive9type 1541 -9 ".\fd.d64" -moncommands .\boot\target\boot.vice-labels -moncommands .\sh\target\sh.vice-labels -moncommands %VICE_LIB%\c64-kernal-r3-serial.vice-labels

@@ -27,4 +27,4 @@ set PMP_COMPILER_CA65_OPTIONS=--ignore-case --feature bracket_as_indirect
 set PMP_PACKAGER=ld65
 
 set PMP_RUNNER=x64sc
-set PMP_RUNNER_X64SC_OPTIONS=-drive8type 1541 -drive9type 1541 -9 "ps-powerc-1 [spinnaker][1986-10-16].d64" +confirmonexit +saveres -model c64 -windowxpos 10 -windowypos 10 -monitorxpos 100 -monitorypos 650 -monitorwidth 200 -jamaction 2
+set PMP_RUNNER_X64SC_OPTIONS=-drive8type 1541 +confirmonexit +saveres -model c64 -jamaction 2
