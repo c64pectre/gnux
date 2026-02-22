@@ -20,8 +20,9 @@
 
 DEFAULT_DEVICE = 8
 
-DISK_COMMAND_FA = DEVICE_DISK_CHANNEL_COMMAND
-DISK_COMMAND_FA_SA = DISK_COMMAND_FA
+DISK_COMMAND_SA    = DEVICE_DISK_CHANNEL_COMMAND
+DISK_COMMAND_FA_SA = DISK_COMMAND_SA
+DISK_COMMAND_FA    = DISK_COMMAND_FA_SA
 
 REDIRECT_INPUT_FA = 1
 REDIRECT_INPUT_SA = 2
@@ -97,5 +98,24 @@ ERROR_NUMBER_WRONG_DEVICE          = 7
 ;;;         inc M
 FALSE = 0
 TRUE = $FF
+
+;endregion
+
+;region Process disk status flags
+
+; OPEN:
+;    0: Do not open, assume open chanel
+;    1: Do open channel
+; SHOW:
+;    0: Do not show
+;    1: Show on error or always depending on ALWAYS
+; ALWAYS:
+;   0: Show on error: error number != "00"
+;   1: Always show status
+
+PROCESS_DISK_STATUS_OPEN   = %00000001                  ; $01
+PROCESS_DISK_STATUS_CLOSE  = %00000010                  ; $02
+PROCESS_DISK_STATUS_SHOW   = %00000100                  ; $04                      
+PROCESS_DISK_STATUS_ALWAYS = %00001000                  ; $08
 
 ;endregion
