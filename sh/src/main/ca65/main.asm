@@ -31,6 +31,8 @@
 .include "c64/cpu.inc"
 .include "opcodes.inc"
 
+.include "abi.inc"
+
 .include "main.import.a65"
 
 .include "main.inc"
