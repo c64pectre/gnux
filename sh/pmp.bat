@@ -22,7 +22,7 @@ set PMP_PROJECT_ARTIFACT_VERSION=1.0.0-SNAPSHOT
 set PMP_PROJECT_PACKAGING=prg
 
 set PMP_COMPILER=ca65
-set PMP_COMPILER_CA65_OPTIONS=--ignore-case --feature bracket_as_indirect
+set PMP_COMPILER_CA65_OPTIONS=--ignore-case --feature bracket_as_indirect --include-dir ../include/ca65 --include-dir ../lib/ca65
 
 set PMP_PACKAGER=ld65
 

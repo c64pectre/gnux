@@ -47,7 +47,7 @@ AREA_2      := KVAR_UNUSED_1
 AREA_2_LAST := KVAR_UNUSED_1_LAST
 AREA_2_SIZE =  KVAR_UNUSED_1_SIZE
 
-; Area 3: $0334-$033B 8 bytes
+; Area 3: $0334-$033B 8 bytes - ABI
 AREA_3      := KVAR_UNUSED_2
 AREA_3_LAST := KVAR_UNUSED_2_LAST
 AREA_3_SIZE =  KVAR_UNUSED_2_SIZE
@@ -63,22 +63,7 @@ AREA_4_SIZE =  AREA_4_LAST - AREA_4 + 1
 
 ; Begin of ABI (Application Binary Interface)
 
-SYS_DEVICE              := AREA_3 + 0                   ; $0334
-WORK_DEVICE             := AREA_3 + 1                   ; $0335
-IN_ACTIVE               := AREA_3 + 2                   ; $0336 ; 0 = no , 1 = yes
-OUT_ACTIVE              := AREA_3 + 3                   ; $0337 ; 0 = no , 1 = yes
-IN_FA                   := AREA_3 + 4                   ; $0338 ; 0 = keyboard
-OUT_FA                  := AREA_3 + 5                   ; $0339 ; 0 = screen
-
-; ARGC: Argument count
-ARGC                    := AREA_4 + 0                   ; $033C
-ARGC_LO                 := ARGC                         ; $033C
-ARGC_HI                 := ARGC + 1                     ; $033D
-
-; PARGV: Pointer to argv: argument value array: array of pointer to string
-PARGV                   := AREA_4 + 2                   ; $033E
-PARGV_LO                := PARGV                        ; $033E
-PARGV_HI                := PARGV + 1                    ; $033F
+; see the-abi-export.asm
 
 ; end of ABI
 
@@ -194,36 +179,36 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Set system and work device to default device (8)
     lda # DEFAULT_DEVICE
-    sta SYS_DEVICE
-    sta WORK_DEVICE
+    sta GNUX_SYS_DEVICE
+    sta GNUX_WORK_DEVICE
 
     ; Set to device number of current file, if any
     lda ZPKERNAL_FA
     if_ne_then
-        sta SYS_DEVICE
-        sta WORK_DEVICE
+        sta GNUX_SYS_DEVICE
+        sta GNUX_WORK_DEVICE
     else_end
 
-    ; PARGV = &ARGV
+    ; GNUX_PARGV = &ARGV
     lda # < ARGV
-    sta PARGV_LO
+    sta GNUX_PARGV_LO
     lda # > ARGV
-    sta PARGV_HI
+    sta GNUX_PARGV_HI
 
     lda # 0                                             ; A = 0 = FALSE = PETSCVII_NUL
 
-    ; ARGC = 0. Note: ARGC_HI is always 0 because ARGC_MAX = 10
-    sta ARGC_LO
-    sta ARGC_HI
+    ; GNUX_ARGC = 0. Note: GNUX_ARGC_HI is always 0 because GNUX_ARGC_MAX = 10
+    sta GNUX_ARGC_LO
+    sta GNUX_ARGC_HI
 
     ; Reset NMI entry count
     sta NMI_ENTRY_COUNT
 
     ; Redirect input & output inactive
-    sta IN_ACTIVE                              ; FALSE
-    sta OUT_ACTIVE                             ; FALSE
-    sta IN_FA                                           ; 0 = Keyboard
-    sta OUT_FA                                          ; 0 = Screen
+    sta GNUX_IN_ACTIVE                              ; FALSE
+    sta GNUX_OUT_ACTIVE                             ; FALSE
+    sta GNUX_IN_FA                                           ; 0 = Keyboard
+    sta GNUX_OUT_FA                                          ; 0 = Screen
 
     ; Set no program loaded
     sta LOADED_PROGRAM_NAME
@@ -320,10 +305,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   printer is '>>'. Redirection file names can be quoted too.
 ;;;   We only need to inc DL (and not DH as well) because we will not cross the page.
 .proc PROCESS_COMMAND_LINE
-    ; ARGC := 0
+    ; GNUX_ARGC := 0
     ldy # 0
-    sty ARGC_LO
-    ; ARGC_HI is always 0
+    sty GNUX_ARGC_LO
+    ; GNUX_ARGC_HI is always 0
 
     from ITERATE_COMMAND_LINE
         ; POINTER TO BYTE DX := & COMMAND_LINE
@@ -424,12 +409,12 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Finished parsing input text
     ; Have we got any arguments?
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     if_ne_then
         ; We have got arguments?
         ; BX: ZSTRING := ARGV[0] = COMMAND
         lda # 0
-        jsr GET_BX_PARGV_INDEX_A                        ; A+ X- Y+ BX+
+        jsr GET_BX_GNUX_PARGV_INDEX_A                        ; A+ X- Y+ BX+
         ldy # 0
         lda [BX],y
         ; Argument 0 not empty?
@@ -445,8 +430,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     jsr RESET_FILE_IO
-            ; assert ! IN_ACTIVE
-            ; assert ! OUT_ACTIVE
+            ; assert ! GNUX_IN_ACTIVE
+            ; assert ! GNUX_OUT_ACTIVE
 
     rts
 .endproc
@@ -455,13 +440,13 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; in:
 ;;;   A: Index 
 ;;; out:
-;;;  AX: PARGV[A]
+;;;  AX: GNUX_PARGV[A]
 ;;; changed: A+ X- Y+ BX+
-.proc GET_AX_PARGV_INDEX_A
-    ; AX := PARGV[A]
-    ldy PARGV_LO
+.proc GET_AX_GNUX_PARGV_INDEX_A
+    ; AX := GNUX_PARGV[A]
+    ldy GNUX_PARGV_LO
     sty AL
-    ldy PARGV_HI
+    ldy GNUX_PARGV_HI
     sty AH
     asl
     tay
@@ -479,13 +464,13 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; in:
 ;;;   A: Index 
 ;;; out:
-;;;   BX: PARGV[A]
+;;;   BX: GNUX_PARGV[A]
 ;;; changed: A+ X- Y+ BX+
-.proc GET_BX_PARGV_INDEX_A
-    ; BX := PARGV[A]
-    ldy PARGV_LO
+.proc GET_BX_GNUX_PARGV_INDEX_A
+    ; BX := GNUX_PARGV[A]
+    ldy GNUX_PARGV_LO
     sty BL
-    ldy PARGV_HI
+    ldy GNUX_PARGV_HI
     sty BH
     asl
     tay
@@ -585,18 +570,18 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; summary: Set ARGV index ARGC to pointer in input text
+;;; summary: Set ARGV index GNUX_ARGC to pointer in input text
 ;;; in:
-;;;   ARGC: Argument count
+;;;   GNUX_ARGC: Argument count
 ;;;   DX: POINTER TO BYTE: Pointer in command line to start of argument text
 ;;; out:
 ;;;   Y: = 0
-;;;   ARGV[ARGC++]: = DX
+;;;   ARGV[GNUX_ARGC++]: = DX
 ;;; changed:
 ;;;   A+ X- Y=0
 .proc SET_ARGV
-    ; Y := ARGC * SIZEOF(WORD) = ARGC * 2 = ARGC << 1
-    lda ARGC_LO
+    ; Y := GNUX_ARGC * SIZEOF(WORD) = GNUX_ARGC * 2 = GNUX_ARGC << 1
+    lda GNUX_ARGC_LO
     asl
     tay
     ; POINTER TO WORD (ARGV + Y) := DX
@@ -604,7 +589,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     sta ARGV,y
     lda DH
     sta ARGV + 1,y
-    inc ARGC_LO
+    inc GNUX_ARGC_LO
 
     ldy # 0
 
@@ -683,13 +668,13 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: Position in COMMAND_LINE
 ;;;   Y: Offset in ARGV
 ;;; out:
-;;;   IN_ACTIVE: Set to 1: redirect input active
+;;;   GNUX_IN_ACTIVE: Set to 1: redirect input active
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ AX+ BX+
 ;;; notes: Need to preserve X & Y for PROCESS_COMMAND_LINE
 .proc REDIRECT_INPUT_FROM_FILE
     ; check Y = 0
-    bit IN_ACTIVE
+    bit GNUX_IN_ACTIVE
     if_mi_then                                          ; TRUE
         ; Redirect input already active.
         sec                                             ; FAIL
@@ -702,10 +687,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     lda # REDIRECT_INPUT_FA
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     ldy # REDIRECT_INPUT_SA
     jsr OPEN_IN_FILE_AX                                 ; A+ X+ Y+ C+
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS
 
@@ -719,7 +704,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc REDIRECT_OUTPUT_TO_FILE
     ; check Y = 0
 
-    bit OUT_ACTIVE
+    bit GNUX_OUT_ACTIVE
     if_mi_then                                          ; TRUE
         ; Redirect output already active.
         sec                                             ; FAIL
@@ -736,10 +721,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
         ; Open
         lda # REDIRECT_OUTPUT_FA
-        ldx WORK_DEVICE
+        ldx GNUX_WORK_DEVICE
         ldy # REDIRECT_OUTPUT_FILE_SA
         jsr OPEN_OUT_FILE_AX                            ; A+ X+ Y+ CX+ dfltn=0 dflto=3
-        ldx WORK_DEVICE
+        ldx GNUX_WORK_DEVICE
         lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
     else_end
 
@@ -751,14 +736,14 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ AX+
 .proc REDIRECT_OUTPUT_TO_PRINTER
-    bit OUT_ACTIVE
+    bit GNUX_OUT_ACTIVE
     if_mi_then
         ; Redirect output already active.
         sec                                             ; FAIL
         rts
     else_end
 
-    ; check OUT_FA = 0
+    ; check GNUX_OUT_FA = 0
 
     ; Open with no name
     ; ""
@@ -809,19 +794,19 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda VIC_B0C
     sta SAVE_VIC_B0C
 
-    ; Call program's entrypoint, passing ARGC and ARGV arguments.
+    ; Call program's entrypoint, passing GNUX_ARGC and ARGV arguments.
     ldx # REGISTER_STACK
     stx RP
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     sta 0,x
     inx
-    lda ARGC_HI
+    lda GNUX_ARGC_HI
     sta 0,x
     inx
-    lda PARGV_LO
+    lda GNUX_PARGV_LO
     sta 0,x
     inx
-    lda ARGC_HI
+    lda GNUX_ARGC_HI
     sta 0,x
     inx
     stx RP
@@ -895,12 +880,12 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   C: 0=OK 1=FAIL
 .proc LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK
     ; Try work disk
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     jsr LOAD_PROGRAM
     if_cs_then
         ; Load from work disk failed.
         ; Try system disk
-        ldx SYS_DEVICE
+        ldx GNUX_SYS_DEVICE
         jsr LOAD_PROGRAM
         if_cs_then
             ; Load from system disk failed too.
@@ -1190,7 +1175,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; in:
 ;;;   ARGV[1]: Program name
 .proc CMD_LOAD
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     cmp # 2
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1200,7 +1185,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; BX := ARGV[1]
     lda # 1
-    jsr GET_BX_PARGV_INDEX_A
+    jsr GET_BX_GNUX_PARGV_INDEX_A
     jsr ZSTRING_BX_LENGTH
     cpy # 0
     if_eq_then
@@ -1223,13 +1208,13 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .endproc
 
 .proc CMD_LS
-    ldx SYS_DEVICE
+    ldx GNUX_SYS_DEVICE
     jsr CMD_DIR
     rts
 .endproc
 
 .proc CMD_L
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     jsr CMD_DIR
     rts
 .endproc
@@ -1237,7 +1222,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Send command to work disk
 ;;; changed: A+ X+ Y+ AX+
 .proc CMD_DISK
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     cmp # 2
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1247,7 +1232,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; AX : ZSTRING := ARGV[1]
     lda # 1
-    jsr GET_AX_PARGV_INDEX_A
+    jsr GET_AX_GNUX_PARGV_INDEX_A
     ; Y := AX.LENGTH
     jsr ZSTRING_AX_LENGTH
     if
@@ -1262,7 +1247,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     ; Open
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+ C+
 
     ; Set output
@@ -1279,7 +1264,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; Necessary
     jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW | PROCESS_DISK_STATUS_ALWAYS
     jsr PROCESS_DISK_STATUS
 
@@ -1289,7 +1274,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Remove (delete, scratch) file
 ;;; changed: A+ X+ Y+ AX+
 .proc CMD_RM
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     cmp # 2
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1299,7 +1284,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; AX := = ARGV[1]
     lda # 1
-    jsr GET_AX_PARGV_INDEX_A
+    jsr GET_AX_GNUX_PARGV_INDEX_A
     jsr ZSTRING_AX_LENGTH
     cpy # FILE_NAME_MAX_LENGTH + 1
     if_eq_then
@@ -1308,7 +1293,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+
 
     ldx # DISK_COMMAND_FA
@@ -1332,7 +1317,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; Necessary
     jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS
 
@@ -1342,7 +1327,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Move (rename) file
 ;;; changed: A+ X+ Y+ AX+
 .proc CMD_MV
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     cmp # 3
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1352,7 +1337,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; AX = ARGV[1] = FROM
     lda # 1
-    jsr GET_AX_PARGV_INDEX_A
+    jsr GET_AX_GNUX_PARGV_INDEX_A
     jsr ZSTRING_AX_LENGTH
     cpy # FILE_NAME_MAX_LENGTH + 1
     if_ge_then
@@ -1363,7 +1348,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; BX = ARGV[2] = TO
     lda # 2
-    jsr GET_BX_PARGV_INDEX_A
+    jsr GET_BX_GNUX_PARGV_INDEX_A
     jsr ZSTRING_BX_LENGTH
     cpy # FILE_NAME_MAX_LENGTH + 1
     if_ge_then
@@ -1372,7 +1357,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+
 
     ldx # DISK_COMMAND_FA
@@ -1404,7 +1389,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; Necessary
     jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS
 
@@ -1414,7 +1399,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Print (cat) file
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+ DX+
 .proc CMD_CAT
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     cmp # 2
     if_ne_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1424,7 +1409,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; BX := ARGV[1]
     lda # 1
-    jsr GET_BX_PARGV_INDEX_A                            ; A+ X- Y+ BX+
+    jsr GET_BX_GNUX_PARGV_INDEX_A                            ; A+ X- Y+ BX+
     jsr ZSTRING_BX_LENGTH
     if
         cpy # 0
@@ -1440,7 +1425,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; Open
     lda # FILE_FA                                       ; A = FILE_FA = FILE_SA
     tay                                                 ; Y = FILE_SA
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     jsr OPEN_IN_FILE_BX                                 ; A+ X+ Y+ C+
     if_cs_then
         ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
@@ -1448,7 +1433,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS
     if_cs_then
@@ -1462,7 +1447,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # FILE_FA
     jsr CLOSE                                           ; A+ X+ Y+ C0
 
-    ldx WORK_DEVICE
+    ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS
     rts
@@ -1470,10 +1455,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Show or change work disk
 .proc CMD_WORK
-    ; DX: POINTER TO UBYTE := & SYS_DEVICE
-    lda # < WORK_DEVICE
+    ; DX: POINTER TO UBYTE := & GNUX_SYS_DEVICE
+    lda # < GNUX_WORK_DEVICE
     sta DL
-    lda # > WORK_DEVICE
+    lda # > GNUX_WORK_DEVICE
     sta DH
     jsr SHOW_OR_CHANGE_DEVICE
 
@@ -1482,10 +1467,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Show or change system disk
 .proc CMD_SYS
-    ; DX: POINTER TO UBYTE := & SYS_DEVICE
-    lda # < SYS_DEVICE
+    ; DX: POINTER TO UBYTE := & GNUX_SYS_DEVICE
+    lda # < GNUX_SYS_DEVICE
     sta DL
-    lda # > SYS_DEVICE
+    lda # > GNUX_SYS_DEVICE
     sta DH
     jsr SHOW_OR_CHANGE_DEVICE
 
@@ -1501,7 +1486,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: DEVICE
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+ DL+
 .proc CMD_DIR
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     cmp # 3
     if_ge_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1518,12 +1503,12 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # PETSCII_DOLLAR
     jsr ZSTRING_AX_APPEND_CHAR_A                        ; A+ X- Y+
 
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     cmp # 2
     if_eq_then
         ; BX :=  ARGV[1]
         lda # 1
-        jsr GET_BX_PARGV_INDEX_A
+        jsr GET_BX_GNUX_PARGV_INDEX_A
         jsr ZSTRING_BX_LENGTH                           ; A+ X- Y+
         cpy # FILE_NAME_MAX_LENGTH + 1
         if_ge_then
@@ -1629,10 +1614,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Show or change work or system device
 ;;; in:
-;;;   DX: POINTER TO UBYTE: Address of device to show or change (WORK_DEVICE or SYS_DEVICE)
+;;;   DX: POINTER TO UBYTE: Address of device to show or change (GNUX_WORK_DEVICE or GNUX_SYS_DEVICE)
 ;;; changed: A+ X+ Y+ AX+ BX+
 .proc SHOW_OR_CHANGE_DEVICE
-    lda ARGC_LO
+    lda GNUX_ARGC_LO
     cmp # 1
     if_eq_then
         ; Show
@@ -1656,7 +1641,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Show device number
 ;;; in:
-;;;   DX: POINTER TO UBYTE: Address of device to show or change (WORK_DEVICE or SYS_DEVICE)
+;;;   DX: POINTER TO UBYTE: Address of device to show or change (GNUX_WORK_DEVICE or GNUX_SYS_DEVICE)
 ;;; changed: A+ X+ Y+ AX+ BX+
 .proc SHOW_DEVICE
     ldx # < RESOURCE_ZSTRING_DEVICE
@@ -1677,7 +1662,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Change device number, if possible, showing error if not.
 ;;; in:
-;;;   DX: POINTER TO UBYTE: Address of device to show or change (WORK_DEVICE or SYS_DEVICE)
+;;;   DX: POINTER TO UBYTE: Address of device to show or change (GNUX_WORK_DEVICE or GNUX_SYS_DEVICE)
 ;;;   ARGV[1]: ZSTRING: Device number to change device
 ;;; out:
 ;;; changed:
@@ -1685,7 +1670,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc CHANGE_DEVICE
     ; A: UBYTE := ARGV[1].DECIMAL_TO_UBYTE              ; DEVICE
     lda # 1
-    jsr GET_BX_PARGV_INDEX_A
+    jsr GET_BX_GNUX_PARGV_INDEX_A
     jsr ZTRING_BX_DECIMAL_TO_UBYTE_A_USING_AL           ; A+ X- Y+ AL+ BX+
     if
         cmp # DEVICE_DISK_MIN
@@ -1963,11 +1948,11 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: Device Address
 ;;;   Y: Secondary Address
 ;;; out:
-;;;   IN_FA: File address if opened successfully, unchanged (0) otherwise
+;;;   GNUX_IN_FA: File address if opened successfully, unchanged (0) otherwise
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3
 .proc OPEN_IN_FILE_AX
-    bit IN_ACTIVE
+    bit GNUX_IN_ACTIVE
     if_mi_then
         ; Yes, already active
         sec                                             ; FAIL
@@ -1982,8 +1967,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr KERNAL_CHKIN                                ; A+ X+ Y+ C+
     pla
     if_cc_then
-        sta IN_FA
-        dec IN_ACTIVE                                   ; TRUE
+        sta GNUX_IN_FA
+        dec GNUX_IN_ACTIVE                                   ; TRUE
     else_end
 
     php
@@ -1994,7 +1979,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .endproc
 
 .proc OPEN_IN_FILE_BX
-    bit IN_ACTIVE
+    bit GNUX_IN_ACTIVE
     if_mi_then
         ; Yes, already active
         sec                                             ; FAIL
@@ -2009,8 +1994,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr KERNAL_CHKIN                                ; A+ X+ Y+ C+
     pla
     if_cc_then
-        sta IN_FA
-        dec IN_ACTIVE                                   ; TRUE
+        sta GNUX_IN_FA
+        dec GNUX_IN_ACTIVE                                   ; TRUE
     else_end
 
     php
@@ -2029,11 +2014,11 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: Device Address
 ;;;   Y: Secondary Address
 ;;; out:
-;;;   OUT_FA: File address if opened successfully, unchanged (0) otherwise
+;;;   GNUX_OUT_FA: File address if opened successfully, unchanged (0) otherwise
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3
 .proc OPEN_OUT_FILE_AX
-    bit OUT_ACTIVE
+    bit GNUX_OUT_ACTIVE
     if_mi_then
         ; Yes, already active
         sec
@@ -2048,8 +2033,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr KERNAL_CHKOUT                               ; A+ X+ Y+ C+
     pla
     if_cc_then
-        sta OUT_FA
-        dec OUT_ACTIVE                                  ; TRUE
+        sta GNUX_OUT_FA
+        dec GNUX_OUT_ACTIVE                                  ; TRUE
     else_end
 
     php
@@ -2066,18 +2051,18 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+
 .proc CLOSE
-    cmp IN_FA
+    cmp GNUX_IN_FA
     if_eq_then
         ldx # 0
-        stx IN_FA
-        stx IN_ACTIVE
+        stx GNUX_IN_FA
+        stx GNUX_IN_ACTIVE
     else_end
 
-    cmp OUT_FA
+    cmp GNUX_OUT_FA
     if_eq_then
         ldx # 0
-        stx OUT_FA
-        stx OUT_ACTIVE
+        stx GNUX_OUT_FA
+        stx GNUX_OUT_ACTIVE
     else_end
 
     jsr KERNAL_CLOSE                                    ; A+ X+ Y+ C+
@@ -2106,10 +2091,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Redirect input & output inactive
     lda # FALSE                                         ; A = FALSE = 0
-    sta IN_ACTIVE
-    sta OUT_ACTIVE
-    sta IN_FA                                           ; 0 = Keyboard
-    sta OUT_FA                                          ; 0 = Screen
+    sta GNUX_IN_ACTIVE
+    sta GNUX_OUT_ACTIVE
+    sta GNUX_IN_FA                                           ; 0 = Keyboard
+    sta GNUX_OUT_FA                                          ; 0 = Screen
 
     lda # 0
     sta ZPKERNAL_STATUS
@@ -2171,10 +2156,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; notes:
 ;;;   We could be more efficient with `bit KERNALZP_STATUS` for EOI, but that would break the Kernal abstraction.
 .proc IN_GET_REDIRECTING_BYTE_A
-    bit IN_ACTIVE
+    bit GNUX_IN_ACTIVE
     if_mi_then
         ; Yes
-        ldx IN_FA
+        ldx GNUX_IN_FA
         jsr KERNAL_CHKIN                                ; A+ X+ Y+ C+
         if_cs_then
             rts                                         ; FAIL
@@ -2229,11 +2214,11 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+
 .proc OUT_PUT_BYTE_REDIRECTING_A
-    bit OUT_ACTIVE                             ; A- X- Y- C- N+ V+ Z+
+    bit GNUX_OUT_ACTIVE                             ; A- X- Y- C- N+ V+ Z+
     if_mi_then
         ; Yes
         pha
-            ldx OUT_FA
+            ldx GNUX_OUT_FA
             jsr KERNAL_CHKOUT                           ; A+ X+ Y+ C+
         pla
         if_cs_then
