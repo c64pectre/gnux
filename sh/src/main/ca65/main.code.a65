@@ -1670,7 +1670,9 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ldy # 0
     lda [DX],y
 
-    jsr OUT_PUT_DECIMAL_UBYTE_A                         ; A+ X+ Y- AL+ BX+
+    jsr A_UBYTE_TO_DECIMAL_AX_BX                        ; A+ X+ Y+ AX+ BX+
+
+    jsr OUT_PUT_ZSTRING_AX_BX_CX
 
     lda # PETSCII_RETURN
     jsr KERNAL_CHROUT
@@ -2341,7 +2343,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; in:
 ;;;   BX: ZSTRING: Decimal number string
 ;;; out:
-;;;   A: UBYTE: Binary representation of input
+;;;   A = AL: UBYTE: Binary representation of input
 ;;; changed:
 ;;;   A+ X- Y+ AL+
 ;;; notes:
@@ -2358,6 +2360,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     loop
         lda [BX],y
         beq _end                                        ; A = NUL -> break
+        ; AL := 10 * AL = (8 + 2) * AL = 8 * AL + 2 * AL = AL << 3 + AL + AL
         lda AL
         asl
         asl
@@ -2366,6 +2369,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         adc AL
         adc AL
         sta AL
+        ; AL += BX[Y] - '0'
         lda [BX],y
         ; "0" = $30 <= A <= "9" = $39
         sec
@@ -2379,7 +2383,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         bne _loop                                       ; bra
     end
 
-    lda AL
+    lda AL                                              ; Result
 
     rts
 .endproc
@@ -2391,13 +2395,14 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   BL,BH,CX: ZSTRING decimal representation of VALUE
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+
 ;;; notes:
+;;;   Disables interrupts because it uses Decimal mode.
+;;;   Result has no leading zeros.
 ;;;   It uses a simple fixed loop that shifts the bits out of the binary value
 ;;;   one at a time and adds it to an intermediate result that is being doubled
 ;;;   (in BCD) on each iteration. Why? Because this is more efficient than the
 ;;;   traditional method of subtracting in a loop: this routine ~900 cycles
-;;    v.s. up to 2000 cycles or more.
-;;;   Source value is destroyed (becomes zero).
-;;;   Disables interrupts because it uses Decimal mode.
+;;;   v.s. up to 2000 cycles or more.
+;;;   Source value is destroyed.
 ;;;   Reference: book "6502 Instruction Set Guide" written by  Andrew John Jacobs and edited by Dion Olsthoorn, October 2021, chapter "Coding Algorithms", section "Decimal Arithmetic", pp. 27.
 .proc AX_UWORD_TO_DECIMAL_AX_BX_CX
     ; Zero out result
@@ -2487,17 +2492,17 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Put unsigned byte to OUT as decimal
 ;;; in:
 ;;;  A: UBYTE: VALUE
-;;; changed: A+ X+ Y- AL+ BX+
+;;; changed: A+ X+ Y+ AX+ BX+
 ;;; notes:
-;;;   No leading zeros.
-;;;   This method is more efficient than the traditional subtract using
-;;;   table of powers of 10 method.
-.proc OUT_PUT_DECIMAL_UBYTE_A
+;;;   Disables interrupts because it uses Decimal mode.
+;;;   Result has no leading zeros.
+;;;   Source value is destroyed.
+.proc A_UBYTE_TO_DECIMAL_AX_BX
     sta AL
     ; Zero out result
-    ldx # 0
-    stx BL                                              ; HI
-    stx BH                                              ; LO
+    ldy # 0
+    sty BL                                              ; HI
+    sty BH                                              ; LO
     ldx # 8                                             ; Bit counter
     sei                                                 ; Because IRQ/NMI handlers use (or may use) adc/sbc
         sed
@@ -2526,29 +2531,41 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         bne _loop
     end
 
-    try
-        ; X <= 2 ; Y=0
-        ; (x = 2) = (A = 0)
-        pha
+    ; X <= 2 ; Y=0
+    ; (x = 2) = (A = 0)
+    pha
+        lsr
+        lsr
+        lsr
+        lsr
+        if_ne_then
+            ora # PETSCII_DIGIT_ZERO
+            sta AX,y
+            iny
+        else_end
+    pla
+    and # $0F
+    ora # PETSCII_DIGIT_ZERO
+    sta AX,y
+    iny
+    cpx # 1
+    if_lt_then
+        inx
+        from_loop
+            lda BX,x
             lsr
             lsr
             lsr
             lsr
-            if_ne_then
-                ora # PETSCII_DIGIT_ZERO
-                jsr KERNAL_CHROUT                       ; A- X- Y- C0 N+ V+ Z+
-                lda ZPKERNAL_STATUS
-                bne _catch
-            else_end
-        pla
-        and # $0F
-        ora # PETSCII_DIGIT_ZERO
-        jsr KERNAL_CHROUT                       ; A- X- Y- C0 N+ V+ Z+
-        lda ZPKERNAL_STATUS
-        bne _catch
-
-        cpx # 1
-        if_lt_then
+            ora # PETSCII_DIGIT_ZERO
+            sta AX,y
+            iny
+            lda BX,x
+            and # $0F
+            ora # PETSCII_DIGIT_ZERO
+            sta AX,y
+            iny
+        next
             inx
             from_loop
                 lda BX,x
@@ -2573,6 +2590,9 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             end
         else_end
     catch_finally_end
+
+    lda # PETSCII_NUL
+    sta AX,y
 
     rts
 .endproc
