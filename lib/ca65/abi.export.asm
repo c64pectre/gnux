@@ -18,12 +18,8 @@
 
 .export GNUX_SYS_DEVICE         := $0334
 .export GNUX_WORK_DEVICE        := $0335
-.export GNUX_IN_ACTIVE          := $0336    ; 0: FALSE , $FF: TRUE
-.export GNUX_OUT_ACTIVE         := $0337    ; 0: FALSE , $FF: TRUE
-.export GNUX_IN_FA              := $0338    ; 0: keyboard
-.export GNUX_OUT_FA             := $0339    ; 0: screen
-.export GNUX_IN_LAST_CHKIN_FA   := $033A    ; 0: no chkin , != 0: last chkin FA
-.export GNUX_OUT_LAST_CHKOUT_FA := $033B    ; 0: no chkin , != 0: last chkin FA
+.export GNUX_IN_FA              := $0336    ; 0: keyboard
+.export GNUX_OUT_FA             := $0337    ; 0: screen
 
 ;;; summary: Argument count
 .export GNUX_ARGC               := $033C

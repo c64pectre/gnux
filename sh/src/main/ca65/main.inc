@@ -1,5 +1,5 @@
 ;    sh: Shell for Commodore 64.
-;    Copyright (C) 2026  C64PECTRE
+;    Copyright (C) 2026 C64PECTRE
 ;
 ;    This program is free software: you can redistribute it and/or modify
 ;    it under the terms of the GNU General Public License as published by
@@ -24,16 +24,19 @@ DISK_COMMAND_SA    = DEVICE_DISK_CHANNEL_COMMAND
 DISK_COMMAND_FA_SA = DISK_COMMAND_SA
 DISK_COMMAND_FA    = DISK_COMMAND_FA_SA
 
-REDIRECT_INPUT_FA = 1
+REDIRECT_INPUT_FA = 2
 REDIRECT_INPUT_SA = 2
 
-REDIRECT_OUTPUT_FA = 2
+REDIRECT_OUTPUT_FA = 3
 REDIRECT_OUTPUT_FILE_SA = 3
-REDIRECT_OUTPUT_PRINTER_DA = 4                              ; MPS-801 / MPS-802 / MPS-803
-REDIRECT_OUTPUT_PRINTER_SA = 7                              ; Business character mode (uper and lower case)
+REDIRECT_OUTPUT_PRINTER_DA = 4                          ; MPS-801 / MPS-802 / MPS-803
+REDIRECT_OUTPUT_PRINTER_SA = 7                          ; Business character mode (uper and lower case)
 
 FILE_FA = 4
 FILE_FA_SA = FILE_FA
+
+LOAD_FA = FILE_FA
+LOAD_SA = KERNAL_LOAD_SA_ABSOLUTE
 
 COMMAND_NAME_SIZE = 5
 
@@ -41,7 +44,7 @@ ARGC_MAX = 10
 
 ARGV_SIZE = ARGC_MAX
 
-PROGRAM_ENTRYPOINT = $1800                                  ; Entry point of loaded program
+PROGRAM_ENTRYPOINT = $1800                              ; Entry point of loaded program
 
 FILE_NAME_MAX_LENGTH = 16
 

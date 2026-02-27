@@ -1,5 +1,5 @@
 ;    sh: Shell for Commodore 64.
-;    Copyright (C) 2026  C64PECTRE
+;    Copyright (C) 2026 C64PECTRE
 ;
 ;    This program is free software: you can redistribute it and/or modify
 ;    it under the terms of the GNU General Public License as published by
@@ -15,19 +15,6 @@
 ;    along with this program.  If not, see https://www.gnu.org/licenses/.
 ;
 ;    Contact: https://github.com/c64pectre/exehdr/ create an issue
-
-;region Notes
-
-; Closing the disk command/status SA 15 also closes or "kills" all other files
-; on that device!
-
-; Opening a file on a sertial/disk device (with KERNAL_SETLFS, KERNAL_SETNAM,
-; KERNAL_OPEN) on a non-existing device will not fail; a subsequent call to
-; KERNAL_CHKOUT will fail with an error "device not present".
-
-; If you call KERNAL_CHKOUT on a non-existing device, it will hang the computer.
-
-;endregion
 
 ;region Kernal internal
 
@@ -129,6 +116,9 @@ SAVE_KERNAL_NMINV_HI            := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 SAVE_S                          := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 5
 NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 6
 
+IN_STATUS                       := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 7
+OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 8
+
 ;endregion
 
 ;region Main
@@ -205,10 +195,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     sta NMI_ENTRY_COUNT
 
     ; Redirect input & output inactive
-    sta GNUX_IN_ACTIVE                              ; FALSE
-    sta GNUX_OUT_ACTIVE                             ; FALSE
-    sta GNUX_IN_FA                                           ; 0 = Keyboard
-    sta GNUX_OUT_FA                                          ; 0 = Screen
+    sta GNUX_IN_FA                                      ; 0 = Keyboard
+    sta GNUX_OUT_FA                                     ; 0 = Screen
 
     ; Set no program loaded
     sta LOADED_PROGRAM_NAME
@@ -230,12 +218,12 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Run loop
 .proc RUN
-    jsr RESET_FILE_IO
-
-    lda # PETSCII_SHIFTED_MODE
-    jsr KERNAL_CHROUT
-
     from_loop
+        jsr RESET_FILE_IO
+
+        lda # PETSCII_SHIFTED_MODE
+        jsr KERNAL_CHROUT
+
         jsr SHOW_PROMPT
         jsr READ_COMMAND_LINE
         jsr PROCESS_COMMAND_LINE
@@ -419,19 +407,19 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         lda [BX],y
         ; Argument 0 not empty?
         if_ne_then
-            jsr TRY_BUILT_IN_COMMAND
-            if_cs_then                                  ; Not built-in command
-                jsr LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
-                if_cc_then
-                    jsr EXECUTE_PROGRAM
+            try
+                jsr TRY_BUILT_IN_COMMAND
+                if_cs_then                              ; Not built-in command
+                    jsr LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
+                    if_cc_then
+                        jsr EXECUTE_PROGRAM
+                    else_end
                 else_end
-            else_end
+            catch_finally_end
         else_end
     else_end
 
     jsr RESET_FILE_IO
-            ; assert ! GNUX_IN_ACTIVE
-            ; assert ! GNUX_OUT_ACTIVE
 
     rts
 .endproc
@@ -668,31 +656,29 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: Position in COMMAND_LINE
 ;;;   Y: Offset in ARGV
 ;;; out:
-;;;   GNUX_IN_ACTIVE: Set to 1: redirect input active
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ AX+ BX+
 ;;; notes: Need to preserve X & Y for PROCESS_COMMAND_LINE
 .proc REDIRECT_INPUT_FROM_FILE
     ; check Y = 0
-    bit GNUX_IN_ACTIVE
-    if_mi_then                                          ; TRUE
-        ; Redirect input already active.
+
+    lda GNUX_IN_FA
+    if_ne_then
         sec                                             ; FAIL
         rts
     else_end
 
     jsr GET_ZSTRING_AX_FILE_NAME_FROM_COMMAND_LINE      ; A+ X- Y+ AX+
-    if_cs_then
-        rts
-    else_end
+    if_cc_then
+        lda # REDIRECT_INPUT_FA
+        ldx GNUX_WORK_DEVICE
+        ldy # REDIRECT_INPUT_SA
+        jsr OPEN_IN_FILE_AX                             ; A+ X+ Y+ C+
 
-    lda # REDIRECT_INPUT_FA
-    ldx GNUX_WORK_DEVICE
-    ldy # REDIRECT_INPUT_SA
-    jsr OPEN_IN_FILE_AX                                 ; A+ X+ Y+ C+
-    ldx GNUX_WORK_DEVICE
-    lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS
+       ;ldx GNUX_WORK_DEVICE
+       ;lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
+       ;jsr PROCESS_DISK_STATUS
+    else_end
 
     rts
 .endproc
@@ -704,9 +690,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc REDIRECT_OUTPUT_TO_FILE
     ; check Y = 0
 
-    bit GNUX_OUT_ACTIVE
-    if_mi_then                                          ; TRUE
-        ; Redirect output already active.
+    lda GNUX_OUT_FA
+    if_ne_then
         sec                                             ; FAIL
         rts
     else_end
@@ -718,14 +703,15 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         ldx # < RESOURCE_ZSTRING_SEQ_WRITE
         ldy # > RESOURCE_ZSTRING_SEQ_WRITE
         jsr ZSTRING_AX_APPEND_ZSTRING_XY_USING_BX       ; A+ X- Y+ BX+ CX+
-
         ; Open
         lda # REDIRECT_OUTPUT_FA
         ldx GNUX_WORK_DEVICE
         ldy # REDIRECT_OUTPUT_FILE_SA
         jsr OPEN_OUT_FILE_AX                            ; A+ X+ Y+ CX+ dfltn=0 dflto=3
-        ldx GNUX_WORK_DEVICE
-        lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
+
+       ;ldx GNUX_WORK_DEVICE
+       ;lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
+       ;jsr PROCESS_DISK_STATUS
     else_end
 
     rts
@@ -736,9 +722,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ AX+
 .proc REDIRECT_OUTPUT_TO_PRINTER
-    bit GNUX_OUT_ACTIVE
-    if_mi_then
-        ; Redirect output already active.
+    lda GNUX_OUT_FA
+    if_ne_then
         sec                                             ; FAIL
         rts
     else_end
@@ -746,7 +731,6 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; check GNUX_OUT_FA = 0
 
     ; Open with no name
-    ; ""
     jsr ZSTRING_AX_INIT_DISK_COMMAND_TEXT               ; A+ X- Y- AX+
     lda # REDIRECT_OUTPUT_FA
     ldx # REDIRECT_OUTPUT_PRINTER_DA
@@ -771,12 +755,23 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    lda TABLE_COMMAND_HANDLER_LO,x
-    sta DL
-    lda TABLE_COMMAND_HANDLER_HI,x
-    sta DH
-    jsr JSR_INDIRECT_DX
-    clc                                                 ; Built-in command
+    try
+        lda TABLE_COMMAND_HANDLER_LO,x
+        sta DL
+        lda TABLE_COMMAND_HANDLER_HI,x
+        sta DH
+
+        jsr JSR_INDIRECT_DX
+
+        clc
+        php
+        bcc _finally
+    catch
+        sec
+        php
+    finally
+        plp
+    end
 
     rts
 .endproc
@@ -786,41 +781,43 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   Entry point is at $1800
 ;;; changed: A+ X+ Y+ AX+ RP+ FP+
 .proc EXECUTE_PROGRAM
-    ; Save colors
-    lda KVAR_COLOR
-    sta SAVE_KVAR_COLOR
-    lda VIC_EC
-    sta SAVE_VIC_EC
-    lda VIC_B0C
-    sta SAVE_VIC_B0C
+    try
+        ; Save colors
+        lda KVAR_COLOR
+        sta SAVE_KVAR_COLOR
+        lda VIC_EC
+        sta SAVE_VIC_EC
+        lda VIC_B0C
+        sta SAVE_VIC_B0C
 
-    ; Call program's entrypoint, passing GNUX_ARGC and ARGV arguments.
-    ldx # REGISTER_STACK
-    stx RP
-    lda GNUX_ARGC_LO
-    sta 0,x
-    inx
-    lda GNUX_ARGC_HI
-    sta 0,x
-    inx
-    lda GNUX_PARGV_LO
-    sta 0,x
-    inx
-    lda GNUX_ARGC_HI
-    sta 0,x
-    inx
-    stx RP
-    stx FP
-    jsr PROGRAM_ENTRYPOINT
+        ; Call program's entrypoint, passing GNUX_ARGC and ARGV arguments.
+        ldx # REGISTER_STACK
+        stx RP
+        lda GNUX_ARGC_LO
+        sta 0,x
+        inx
+        lda GNUX_ARGC_HI
+        sta 0,x
+        inx
+        lda GNUX_PARGV_LO
+        sta 0,x
+        inx
+        lda GNUX_ARGC_HI
+        sta 0,x
+        inx
+        stx RP
+        stx FP
+        jsr PROGRAM_ENTRYPOINT
 
-    ; Restore colors
-    lda SAVE_VIC_EC
-    sta VIC_EC
-    lda SAVE_VIC_B0C
-    sta VIC_B0C
-    lda SAVE_KVAR_COLOR
-    sta KVAR_COLOR
-    jsr FILL_COLOR_SCREEN_A
+        ; Restore colors
+        lda SAVE_VIC_EC
+        sta VIC_EC
+        lda SAVE_VIC_B0C
+        sta VIC_B0C
+        lda SAVE_KVAR_COLOR
+        sta KVAR_COLOR
+        jsr FILL_COLOR_SCREEN_A
+    catch_finally_end
 
     rts
 .endproc
@@ -931,8 +928,9 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     jsr ZSTRING_AX_APPEND_DOT_SH                        ; A+ X+ Y+
 
     ; Load
-    lda # FILE_FA_SA
-    tay
+    lda # LOAD_FA
+    ldy # LOAD_SA
+    ldx DL                                              ; X = DL = DEVICE
     jsr KERNAL_SETLFS
     jsr ZSTRING_AX_LENGTH
     tya
@@ -1006,25 +1004,34 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; changed: A+ X+ Y+ C+
 .proc PROCESS_DISK_STATUS
     pha
+        clc                                             ; C0
         and # PROCESS_DISK_STATUS_OPEN                  ; A+ N+ Z+
         if_ne_then
-            jsr OPEN_DISK_COMMAND_STATUS_CHANNEL        ; Basically never fails | A+ X+ Y+
+            jsr OPEN_DISK_COMMAND_STATUS_CHANNEL        ; A+ X+ Y+ C+
         else_end
 
-        jsr READ_DISK_STATUS                            ; A+ X+ Y+ C+
-        if
-            pla
-            pha
-            and # PROCESS_DISK_STATUS_SHOW              ; A+ N+ Z+
-            beq _end                                    ; ~SHOW -> No
-            pla
-            pha
-            and # PROCESS_DISK_STATUS_ALWAYS            ; A+ N+ Z+
-            bne _then                                   ; ALWAYS -> Yes
-            bcc _end                                    ; C=0 -> No
-            ; C=1                                       ; Yes
-        then
-            jsr OUT_DISK_STATUS                         ; A+ X+ Y- P-
+        if_cc_then
+            jsr READ_DISK_STATUS                        ; A+ X+ Y+ C+
+        else_end
+
+        if_cc_then
+            ; Check disk status: "00" is OK, else is error
+            jsr CHECK_DISK_STATUS                       ; A+ X- Y- C+
+            if
+                pla
+                pha
+                and # PROCESS_DISK_STATUS_SHOW          ; A+ N+ Z+
+                beq _end                                ; ~SHOW -> No
+                pla
+                pha
+                and # PROCESS_DISK_STATUS_ALWAYS        ; A+ N+ Z+
+                bne _then                               ; ALWAYS -> Yes
+                bcc _end                                ; C=0 -> No
+                ; check C=1                             ; Yes
+            then
+                jsr OUT_DISK_STATUS                     ; A+ X+ Y- P-
+                ; check C=1
+            else_end
         else_end
     pla
     and # PROCESS_DISK_STATUS_CLOSE                     ; A+ N+ Z+
@@ -1040,15 +1047,15 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: DEVICE
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+
-;;; notes: Basically never fails
+;;; changed: A+ X+ Y- C+
+;;; notes: Basically never fails because there is no file name
 .proc OPEN_DISK_COMMAND_STATUS_CHANNEL
     lda # 0
     jsr KERNAL_SETNAM                                   ; A- X- Y-
     lda # DISK_COMMAND_FA_SA
     tay
     jsr KERNAL_SETLFS                                   ; A=FA X=DA Y=SA | A- X- Y-
-    jsr KERNAL_OPEN                                     ; A+ X+ Y+ C+
+    jsr KERNAL_OPEN                                     ; A+ X+ Y- C+
 
     rts
 .endproc
@@ -1057,9 +1064,9 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; changed: A+ X+ Y+ P-
 .proc CLOSE_DISK_COMMAND_STATUS_CHANNEL
     php
-    lda # DISK_COMMAND_FA
+        lda # DISK_COMMAND_FA
         jsr KERNAL_CLOSE                                ; A+ X+ Y+ C+
-        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+        jsr CLRCHN                                      ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0
     plp
 
     rts
@@ -1073,39 +1080,41 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   DISK_STATUS_TEXT: Disk status that has been read
 ;;; changed: A+ X+ Y+ C+
 .proc READ_DISK_STATUS
+    ; DISK_STATUS_TEXT = ""
     lda # PETSCII_NUL
     sta DISK_STATUS_TEXT
 
     ; Set input
     ldx # DISK_COMMAND_FA
-    jsr KERNAL_CHKIN                                    ; A+ X+ Y+ C+
+    jsr KERNAL_CHKIN                                    ; A+ X+ Y- C+
     if_cs_then
         ; Cannot read disk status
-        sec
         rts
     else_end
 
     ; Read line
-    from
-        ldy # 0
-    loop
-        jsr KERNAL_CHRIN                                ; A+ X+ Y- C+
-        cmp # PETSCII_RETURN
-        beq _end                                        ; break
-        sta DISK_STATUS_TEXT , y
-    next
-        iny
-        bne _loop                                       ; bra
-    end
+    try
+        from
+            ldy # 0
+        loop
+            jsr KERNAL_CHRIN                            ; out A=RESULT | A+ X+ Y- C0 V+ N+ Z+
+            ldx ZPKERNAL_STATUS
+            bne _catch                                  ; Error -> throw
+            cmp # PETSCII_RETURN
+            beq _end                                    ; break
+            sta DISK_STATUS_TEXT , y
+        next
+            iny
+            bne _loop
+        end
+    catch_finally_end
 
     lda # PETSCII_NUL
     sta DISK_STATUS_TEXT , y
 
     ; Last chrin causes EOI and C=1
 
-    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
-
-    jsr CHECK_DISK_STATUS                               ; A+ X- Y- C+
+    jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0
 
     rts
 .endproc
@@ -1252,17 +1261,17 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Set output
     ldx # DISK_COMMAND_FA
-    jsr KERNAL_CHKOUT                                   ; A+ X+ Y+ C+
+    jsr CHKOUT                                          ; A- X- Y- C+
     if_cs_then
         ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
         jsr OUT_ERROR_X_NUMBER
         rts
     else_end
 
-    jsr OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_AX
+    jsr OUT_PUT_STRING_ZSTRING_AX
 
     ; Necessary
-    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+    jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW | PROCESS_DISK_STATUS_ALWAYS
@@ -1297,7 +1306,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+
 
     ldx # DISK_COMMAND_FA
-    jsr KERNAL_CHKOUT                                   ; A+ X+ Y+ C+
+    jsr CHKOUT                                          ; A- X- Y- C+
     if_cs_then
         ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
         jsr OUT_ERROR_X_NUMBER
@@ -1312,7 +1321,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # PETSCII_COLON
     jsr KERNAL_CHROUT
 
-    jsr OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_AX
+    jsr OUT_PUT_STRING_ZSTRING_AX
 
     ; Necessary
     jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
@@ -1377,14 +1386,14 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     jsr KERNAL_CHROUT
 
     ; TO
-    jsr OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_BX
+    jsr OUT_PUT_STRING_ZSTRING_BX
 
     ; "="
     lda # PETSCII_EQUALS_SIGN
     jsr KERNAL_CHROUT
 
     ; FROM
-    jsr OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_AX
+    jsr OUT_PUT_STRING_ZSTRING_AX
 
     ; Necessary
     jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
@@ -1407,9 +1416,15 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
+    ; Like Gnu cat, close IN redirection if we have got a file
+    lda GNUX_IN_FA
+    if_ne_then
+        jsr CLOSE                                       ; Does CLRCHN too
+    else_end
+
     ; BX := ARGV[1]
     lda # 1
-    jsr GET_BX_GNUX_PARGV_INDEX_A                            ; A+ X- Y+ BX+
+    jsr GET_BX_GNUX_PARGV_INDEX_A                       ; A+ X- Y+ BX+
     jsr ZSTRING_BX_LENGTH
     if
         cpy # 0
@@ -1423,8 +1438,8 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     ; Open
-    lda # FILE_FA                                       ; A = FILE_FA = FILE_SA
-    tay                                                 ; Y = FILE_SA
+    lda # REDIRECT_INPUT_FA
+    ldy # REDIRECT_INPUT_SA
     ldx GNUX_WORK_DEVICE
     jsr OPEN_IN_FILE_BX                                 ; A+ X+ Y+ C+
     if_cs_then
@@ -1435,16 +1450,18 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN
     if_cs_then
         rts
     else_end
 
-    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+    jsr STREAM_COPY_IN_TO_OUT
+    ; TODO: check errors?
 
-    jsr REDIRECTING_STREAM_COPY_IN_TO_OUT
+    lda # REDIRECT_INPUT_FA
+    jsr CLOSE                                           ; A+ X+ Y+ C0
 
-    lda # FILE_FA
+    lda # REDIRECT_OUTPUT_FA
     jsr CLOSE                                           ; A+ X+ Y+ C0
 
     ldx GNUX_WORK_DEVICE
@@ -1540,54 +1557,53 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     if_cs_then
         rts
     else_end
+
     try
-        ; Now KERNALZP_STATUS may be != 0
-        ; CHKIN clears KERNALZP_STATUS
-        ldx # FILE_FA
-        jsr KERNAL_CHKIN                                ; A+ X+ Y+ C+ KERNALZP_STATUS=0 DFLTN=DEVICE
-        ; check C = 0
-        bcs _catch
-
         ; Load address
-        jsr IN_GET_REDIRECTING_BYTE_A
-        bcs _catch
-        jsr IN_GET_REDIRECTING_BYTE_A
-        bcs _catch
+        ; Reading the first two bytes never gives error, so we need not check.
+        jsr IN_CHKIN
+        jsr KERNAL_CHRIN                                ; A+ X+ Y- C0 N+ V+ Z+
+        jsr KERNAL_CHRIN                                ; A+ X+ Y- C0 N+ V+ Z+
 
+        jsr OUT_CHKOUT                                  ; A+ X+ Y+ C+
         lda # PETSCII_RETURN
-        jsr OUT_PUT_BYTE_REDIRECTING_A                  ; A+ X- Y+ C+
-        bcs _catch
+        jsr KERNAL_CHROUT                               ; A+ X+ Y- C0 N+ V+ Z+
 
         from_loop OUTER
-            jsr IN_GET_REDIRECTING_BYTE_A
-            bcs _catch
-            jsr IN_GET_REDIRECTING_BYTE_A
-            bcs _catch
-            jsr IN_GET_REDIRECTING_BYTE_A
-            bcs _catch
+            jsr IN_CHKIN
+            jsr KERNAL_CHRIN                            ; A+ X+ Y- C0 N+ V+ Z+
+            beq OUTER::_end                             ; End of directory -> break
+            jsr KERNAL_CHRIN                            ; A+ X+ Y- C0 N+ V+ Z+
+
+            jsr KERNAL_CHRIN                            ; A+ X+ Y- C0 N+ V+ Z+
             sta AL
-            jsr IN_GET_REDIRECTING_BYTE_A
-            bcs _catch
+            jsr KERNAL_CHRIN                            ; A+ X+ Y- C0 N+ V+ Z+
             sta AH
             jsr AX_UWORD_TO_DECIMAL_AX_BX_CX            ; A+ X+ Y+ AX+ BX+ CX+
-            jsr OUT_PUT_REDIRECTING_ZSTRING_AX_BX_CX    ; A+ X+ Y-
+
+            jsr KERNAL_CHROUT                           ; A+ X+ Y- C0 N+ V+ Z+
+            jsr OUT_PUT_ZSTRING_AX_BX_CX
             lda # PETSCII_SPACE
-            jsr OUT_PUT_BYTE_REDIRECTING_A              ; A+ X- Y+
-            bcs _catch
+            jsr KERNAL_CHROUT
             from_loop INNER
-                jsr IN_GET_REDIRECTING_BYTE_A
-                bcs _catch
+                jsr IN_CHKIN
+                jsr KERNAL_CHRIN
+                ldx ZPKERNAL_STATUS
+                bne OUTER::_end                         ; EOI -> break
+                bit ZPKERNAL_STATUS
+                bvs OUTER::_end                         ; EOI -> break
                 cmp # PETSCII_NUL
-                beq _end                                ; break
-                jsr OUT_PUT_BYTE_REDIRECTING_A          ; A+ X+ Y+ C+
-                bcs _catch
+                beq INNER::_end                         ; break
+
+                jsr OUT_CHKOUT                          ; A- X- Y- C+
+                jsr KERNAL_CHROUT
             next
                 jmp INNER::_loop
             end
 
+            jsr OUT_CHKOUT                              ; A- X- Y- C+
             lda # PETSCII_RETURN
-            jsr OUT_PUT_BYTE_REDIRECTING_A              ; A+ X+ Y+ C+
-            bcs _catch
+            jsr KERNAL_CHROUT
 
             ; STOP key pressed?
             jsr KERNAL_STOP
@@ -1598,11 +1614,12 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             jmp _loop
         end
 
+        jsr OUT_CHKOUT                                  ; A- X- Y- C+
         lda # PETSCII_RETURN
-        jsr OUT_PUT_BYTE_REDIRECTING_A                  ; A+ X+ Y+
+        jsr KERNAL_CHROUT
     catch_finally
         lda # FILE_FA
-        jsr CLOSE                                       ; A+ X+ Y+ C+
+        jsr CLOSE
     end
 
     rts
@@ -1644,9 +1661,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   DX: POINTER TO UBYTE: Address of device to show or change (GNUX_WORK_DEVICE or GNUX_SYS_DEVICE)
 ;;; changed: A+ X+ Y+ AX+ BX+
 .proc SHOW_DEVICE
+    jsr OUT_CHKOUT                                      ; A- X- Y- C+
     ldx # < RESOURCE_ZSTRING_DEVICE
     ldy # > RESOURCE_ZSTRING_DEVICE
-    jsr OUT_PUT_STRING_REDIRECTING_XY_USING_AX          ; A+ X- Y+ AX+
+    jsr OUT_PUT_STRING_XY_USING_AX
 
     ; A: UBYTE := [DX]                                  ; DEVICE
     ldy # 0
@@ -1657,7 +1675,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     jsr OUT_PUT_ZSTRING_AX_BX_CX
 
     lda # PETSCII_RETURN
-    jsr KERNAL_CHROUT                                   ; A- X- Y- C0
+    jsr KERNAL_CHROUT
 
     rts
 .endproc
@@ -1707,8 +1725,9 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     tax
     jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; in X=DEVICE | A+ X+ Y+ C+
     ; Open on non-existing device will not fail, so no need to check C here.
+    ; Use CHKOUT to check if device is present; do not use CHKIN because this will hang when no device present.
     ldx # DISK_COMMAND_FA
-    jsr KERNAL_CHKOUT                                   ; A+ X+ Y+ C+
+    jsr KERNAL_CHKOUT                                   ; A- X- Y- C+
     php
         jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL           ; in A+ X+ Y+ C+
         lda # DISK_COMMAND_FA
@@ -1917,7 +1936,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ldx AL
     ldy AH
     jsr KERNAL_SETNAM                                   ; A=NAME.LENGTH X=<NAME Y=>NAME | A- X- Y-
-    jsr KERNAL_OPEN                                     ; A+ X+ Y+ C+
+    jsr KERNAL_OPEN                                     ; A+ X+ Y- C+
 
     rts
 .endproc
@@ -1938,7 +1957,7 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ldx BL
     ldy BH
     jsr KERNAL_SETNAM                                   ; A=NAME.LENGTH X=<NAME Y=>NAME | A- X- Y-
-    jsr KERNAL_OPEN                                     ; A+ X+ Y+ C+
+    jsr KERNAL_OPEN                                     ; A+ X+ Y- C+
 
     rts
 .endproc
@@ -1950,61 +1969,49 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: Device Address
 ;;;   Y: Secondary Address
 ;;; out:
-;;;   GNUX_IN_FA: File address if opened successfully, unchanged (0) otherwise
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3
 .proc OPEN_IN_FILE_AX
-    bit GNUX_IN_ACTIVE
-    if_mi_then
-        ; Yes, already active
-        sec                                             ; FAIL
-        rts
-    else_end
-
     pha
-        jsr OPEN_FILE_AX                                ; A+ X+ Y+
+        lda GNUX_IN_FA
+        if_ne_then
+            ; Already open
+            sec
+        else_end
     pla
     pha
-        tax
-        jsr KERNAL_CHKIN                                ; A+ X+ Y+ C+
+        jsr OPEN_FILE_AX                            ; A+ X+ Y+
     pla
     if_cc_then
         sta GNUX_IN_FA
-        dec GNUX_IN_ACTIVE                                   ; TRUE
     else_end
-
-    php
-        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
-    plp
 
     rts
 .endproc
 
+;;; summary: Open file for input
+;;; in:
+;;;   BX: ZSTRING: File name
+;;;   A: File Address
+;;;   X: Device Address
+;;;   Y: Secondary Address
+;;; out:
+;;;   C: 0=OK 1=FAIL
+;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3
 .proc OPEN_IN_FILE_BX
-    bit GNUX_IN_ACTIVE
-    if_mi_then
-        ; Yes, already active
-        sec                                             ; FAIL
-        rts
-    else_end
-
     pha
-        jsr OPEN_FILE_BX                                ; A+ X+ Y+
+        lda GNUX_IN_FA
+        if_ne_then
+            ; Already open
+            sec
+        else_end
     pla
     pha
-        tax
-        jsr KERNAL_CHKIN                                ; A+ X+ Y+ C+
+        jsr OPEN_FILE_BX                                ; A+ X+ Y+ C+
     pla
     if_cc_then
         sta GNUX_IN_FA
-        dec GNUX_IN_ACTIVE                                   ; TRUE
     else_end
-
-    php
-        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
-    plp
-
-    clc                                                 ; OK
 
     rts
 .endproc
@@ -2016,32 +2023,22 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: Device Address
 ;;;   Y: Secondary Address
 ;;; out:
-;;;   GNUX_OUT_FA: File address if opened successfully, unchanged (0) otherwise
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3
 .proc OPEN_OUT_FILE_AX
-    bit GNUX_OUT_ACTIVE
-    if_mi_then
-        ; Yes, already active
-        sec
-        rts
-    else_end
-
     pha
-        jsr OPEN_FILE_AX                                ; A+ X+ Y+
+        lda GNUX_OUT_FA
+        if_ne_then
+            ; Already open
+            sec
+        else_end
     pla
     pha
-        tax
-        jsr KERNAL_CHKOUT                               ; A+ X+ Y+ C+
+        jsr OPEN_FILE_AX                                ; A+ X+ Y+ C+
     pla
     if_cc_then
         sta GNUX_OUT_FA
-        dec GNUX_OUT_ACTIVE                                  ; TRUE
     else_end
-
-    php
-        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
-    plp
 
     rts
 .endproc
@@ -2057,22 +2054,18 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     if_eq_then
         ldx # 0
         stx GNUX_IN_FA
-        stx GNUX_IN_ACTIVE
     else_end
 
     cmp GNUX_OUT_FA
     if_eq_then
         ldx # 0
         stx GNUX_OUT_FA
-        stx GNUX_OUT_ACTIVE
     else_end
 
-    jsr KERNAL_CLOSE                                    ; A+ X+ Y+ C+
-    ; May fail on write buffered character
+    jsr CLRCHN                                          ; A+ X+ Y- C1 DFLTN=0 DFLTO=3 STATUS=0
 
-    php
-        jsr CLRCHN                                      ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
-    plp
+    jsr KERNAL_CLOSE                                    ; in A: FA | A+ X+ Y+ C+
+    ; May fail on write buffered character
 
     rts
 .endproc
@@ -2080,95 +2073,119 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Back to default file I/O
 ;;; changed: A+ X+ Y+
 .proc RESET_FILE_IO
+    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3 STATUS=0
+
     ; Close all open files
     from_loop
         ldx ZPKERNAL_LDTND
         beq _end
         lda KVAR_LAT
-        jsr KERNAL_CLOSE                                ; A+ X+ Y+
+        jsr KERNAL_CLOSE                                ; A+ X+ Y+ C+
     next
         jmp _loop
     end
-    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
 
     ; Redirect input & output inactive
-    lda # FALSE                                         ; A = FALSE = 0
-    sta GNUX_IN_ACTIVE
-    sta GNUX_OUT_ACTIVE
-    sta GNUX_IN_FA                                           ; 0 = Keyboard
-    sta GNUX_OUT_FA                                          ; 0 = Screen
-
     lda # 0
-    sta ZPKERNAL_STATUS
+    sta GNUX_IN_FA                                      ; 0 = Keyboard
+    sta GNUX_OUT_FA                                     ; 0 = Screen
 
     rts
 .endproc
 
 ;;; summary: Clear IN and OUT channel
-;;; changed: A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+;;; changed: A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0
+;;; notes:
 .proc CLRCHN
-    jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+    pha
+        txa
+        pha
+            jsr KERNAL_CLRCHN                           ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+            lda # 0
+            ; Kernal `STATUS` may be non-zero, e.g. EOI, it is cleared on CHKIN/CHKOUT, but we do not CHKOUT before writing error because it is screen.
+            sta ZPKERNAL_STATUS
+        pla
+        tax
+    pla
+    clc
 
     rts
 .endproc
 
-;endregion
-
-;region IN
-
-;;; summary: Read byte from input channel (IN), without redirection and with error handling
+;;; summary: Select input channel
 ;;; out:
-;;;   A: Byte read, iff C=0 and V=0
-;;;   C: 0=OK 1=FAIL
-;;;   V: 0=NOT-EOF 1=EOF
-;;; changed: A+ X+ Y- C+ V+
-;;; notes:
-;;;   Error (C=1) overrules any EOI (V=1).
-;;;   We could be more efficient with `bit KERNALZP_STATUS` for EOI, but that would break the Kernal abstraction.
-.proc IN_GET_NON_REDIRECTING_BYTE_A
-    jsr KERNAL_CHRIN                                    ; out A=RESULT | A+ X+ Y- C0 V+ N+ Z+
-    tax                                                 ; X = A = RESULT
-    jsr KERNAL_READST                                   ; A+ X- Y- C+ V- N+ Z+
-    clc                                                 ; C0
-    clv                                                 ; V0
-    if_ne_then
-        ; Error or EOI
-        and # < ~ KERNAL_IO_EOI
-        if_ne_then
-            ; Error
-            sec
-            bcs _end
-        else
-            ; EOI
-            bit BIT_V_SET                               ; EOI -> C- V1 N0 Z+
-        end
-    else_end
-
-    txa                                                 ; A = X = RESULT | C+ N+ V+ Z+
+;;;   C: 0: OK , 1: ERROR
+;;; changed: A- X- Y- C+
+.proc CHKIN
+    clc
+    pha
+        txa
+        pha
+            jsr KERNAL_CHKIN                            ; A+ X+ Y- C+
+        pla
+        tax
+    pla
 
     rts
 .endproc
 
-;;; summary: Read byte from input channel (IN), with redirection and error handling
+;;; summary: Select IN as input channel
 ;;; out:
-;;;   A: Byte read, if OK
-;;;   V: 0=NOT-EOF 1=EOF
-;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+
-;;; notes:
-;;;   We could be more efficient with `bit KERNALZP_STATUS` for EOI, but that would break the Kernal abstraction.
-.proc IN_GET_REDIRECTING_BYTE_A
-    bit GNUX_IN_ACTIVE
-    if_mi_then
-        ; Yes
-        ldx GNUX_IN_FA
-        jsr KERNAL_CHKIN                                ; A+ X+ Y+ C+
-        if_cs_then
-            rts                                         ; FAIL
-        else_end
-    else_end
+;;;   C: 0: OK , 1: ERROR
+;;; changed: A- X- Y- C+
+.proc IN_CHKIN
+    clc
+    pha
+        txa
+        pha
+            ldx # 0
+            stx ZPKERNAL_STATUS
+            ldx GNUX_IN_FA
+            if_ne_then
+                jsr KERNAL_CHKIN                        ; A+ X+ Y- C+
+            else_end
+        pla
+        tax
+    pla
 
-    jsr IN_GET_NON_REDIRECTING_BYTE_A
+    rts
+.endproc
+
+;;; summary: Select output channel
+;;; out:
+;;;   C: 0: OK , 1: ERROR
+;;; changed: A- X- Y- C+
+.proc CHKOUT
+    clc
+    pha
+        txa
+        pha
+            jsr KERNAL_CHKOUT                           ; A+ X+ Y- C+
+        pla
+        tax
+    pla
+
+
+    rts
+.endproc
+
+;;; summary: Select OUT as output channel, with redirection.
+;;; out:
+;;;   C: 0: OK , 1: ERROR
+;;; changed: A- X- Y- C+
+.proc OUT_CHKOUT
+    pha
+        txa
+        pha
+            ldx # 0
+            stx ZPKERNAL_STATUS
+            ldx GNUX_OUT_FA
+            if_ne_then
+                jsr KERNAL_CHKOUT                       ; A+ X+ Y- C+
+            else_end
+        pla
+        tax
+    pla
 
     rts
 .endproc
@@ -2177,62 +2194,48 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;region OUT
 
-.proc OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_AX
+;;; summary: Write string to output channel (OUT), with error handling
+;;; in:
+;;;   AX: ZSTRING: String to write
+;;; out:
+;;;   C: 0=OK 1=FAIL
+;;; changed: A+ X+ Y+ C+ N+ V+ Z+
+.proc OUT_PUT_STRING_ZSTRING_AX
     from
         ldy # 0
     loop
         lda [AX],y
-        beq _end                                        ; break
-        jsr KERNAL_CHROUT                               ; A- X- Y-
-        bcs _end                                        ; FAIL -> break
+        beq _end                                        ; NUL -> break
+        jsr KERNAL_CHROUT                               ; A+ X+ Y- C0 N+ V+ Z+
+        ldx ZPKERNAL_STATUS
+        bne _end                                        ; Error -> break
     next
         iny
-        bne _loop
+        bne _loop                                       ; bra
     end
 
     rts
 .endproc
 
-.proc OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_BX
+;;; summary: Write string to output channel (OUT), with error handling
+;;; in:
+;;;   AX: ZSTRING: String to write
+;;; out:
+;;;   C: 0=OK 1=FAIL
+;;; changed: A+ X+ Y+ C+ N+ V+ Z+
+.proc OUT_PUT_STRING_ZSTRING_BX
     from
         ldy # 0
     loop
         lda [BX],y
-        beq _end                                        ; break
-        jsr KERNAL_CHROUT                               ; A- X- Y-
-        bcs _end                                        ; FAIL -> break
+        beq _end                                        ; NUL -> break
+        jsr KERNAL_CHROUT                               ; A+ X+ Y- C0 N+ V+ Z+
+        ldx ZPKERNAL_STATUS
+        bne _end                                        ; Error -> break
     next
         iny
-        bne _loop
+        bne _loop                                       ; bra
     end
-
-    rts
-.endproc
-
-;;; summary: Write byte to output channel, with redirection and error handling
-;;; in:
-;;;   A: Byte to write
-;;; out:
-;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+
-.proc OUT_PUT_BYTE_REDIRECTING_A
-    bit GNUX_OUT_ACTIVE                             ; A- X- Y- C- N+ V+ Z+
-    if_mi_then
-        ; Yes
-        pha
-            ldx GNUX_OUT_FA
-            jsr KERNAL_CHKOUT                           ; A+ X+ Y+ C+
-        pla
-        if_cs_then
-            rts                                         ; FAIL
-        else_end
-    else_end
-    jsr KERNAL_CHROUT                                   ; A+ X+ Y- C=0
-    jsr KERNAL_READST                                   ; A+ X- Y- C+ N+ Z+ 
-    clc
-    if_ne_then
-        sec                                             ; FAIL
-    else_end
 
     rts
 .endproc
@@ -2243,79 +2246,37 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
 ;;; changed:
-;;;   A+ X+ Y+ C+ AX+
-.proc OUT_PUT_STRING_REDIRECTING_XY_USING_AX
+;;;   A- X+ Y+ C+ N+ V+ Z+ AX+
+.proc OUT_PUT_STRING_XY_USING_AX
     stx AL
     sty AH
-    jsr OUT_PUT_STRING_REDIRECTING_ZSTRING_AX           ; A+ X- Y+ C+
+    jsr OUT_PUT_STRING_ZSTRING_AX                       ; A+ X+ Y+ C+ N+ V+ Z+
 
     rts
 .endproc
 
-;;; summary: Write string to output channel (OUT)
+;;; summary: Write ZSTRING in AX, BX, CX
 ;;; in:
-;;;   AX: ZSTRING: String to write
+;;;   AX, BX, CX: ZSTRING: Source
 ;;; out:
-;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+
-.proc OUT_PUT_STRING_REDIRECTING_ZSTRING_AX
-    from
-        ldy # 0
-    loop
-        lda [AX],y
-        beq _end                                        ; break
-        jsr OUT_PUT_BYTE_REDIRECTING_A                  ; A- X- Y- C+
-        bcs _end                                        ; FAIL -> break
-    next
-        iny
-        bne _loop
-    end
-
-    rts
-.endproc
-
-;;; summary: Write string to output channel
-;;; in:
-;;;   BX: Nul-terminated string
-;;; changed:
-;;;   A+ X+ Y+ C+
-.proc OUT_PUT_STRING_REDIRECTING_ZSTRING_BX
-    from
-        ldy # 0
-    loop
-        lda [BX],y
-        beq _end                                        ; break
-        jsr OUT_PUT_BYTE_REDIRECTING_A                  ; A- X- Y- C0
-        bcs _end                                        ; FAIL -> break
-    next
-        iny
-        bne _loop
-    end
-
-    rts
-.endproc
-
-
+;;;   C: 0: OK , 1: FAIL
+;;; changed: A+ X+ Y+ C+ N+ V+ Z+
 ;;; notes:
 ;;;   Do not change DX
-.proc OUT_PUT_REDIRECTING_ZSTRING_AX_BX_CX
-    lda DL
-    pha
-        from
-            ldx # 0
-            stx DL
-        loop
-            ldx DL
-            lda AX , x
-            beq _end                                    ; break
-            jsr OUT_PUT_BYTE_REDIRECTING_A              ; A+ X+ Y+ C+
-            bcs _end                                    ; FAIL -> break
-        next
-            inc DL
-            bne _loop                                   ; bra
-        end
-    pla
-    sta DL
+.proc OUT_PUT_ZSTRING_AX_BX_CX
+    from
+        ldy # 0
+    loop
+        ldx AX , y
+        beq _end                                        ; NUL -> break
+        txa
+        jsr KERNAL_CHROUT                               ; A+ X+ Y- C0 N+ V+ Z+
+        ldx ZPKERNAL_STATUS
+        bne _end                                        ; Error -> break
+    next
+        iny
+        bne _loop                                       ; bra
+    end
 
     rts
 .endproc
@@ -2328,33 +2289,48 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; notes:
 ;;;   `<SHIFT>` pauses
 ;;;   `<STOP>` cancels. On cancel the channels are cleared.
-;;;   What makes this routine a bit complicated is the fact that you get EOI on the last byte when calling `chrin`.
-.proc REDIRECTING_STREAM_COPY_IN_TO_OUT
-    from_loop COPY
-        jsr IN_GET_REDIRECTING_BYTE_A                   ; A+ X+ Y+ C+ N+ V+ Z+
-        bcs COPY::_end                                  ; ERROR -> break
-        php
-            jsr OUT_PUT_BYTE_REDIRECTING_A
-            php
-            pla
-            tax
-        plp
-        bvs COPY::_end                                  ; EOI -> break
-        txa
-        and # CPU_P_C
-        bne _end                                        ; ERROR -> break
+;;;   What makes this routine a bit complicated is the fact that you get EOI on the last byte when calling `chrin`
+;;;   So we still need to write that byte/char.
+;;;   Basically, an empty file is not possible with CBM DOS, there are always at least 2 bytes.
+.proc STREAM_COPY_IN_TO_OUT
+    try
+        lda # 0
+        sta IN_STATUS
+        sta OUT_STATUS
 
-        ; STOP key pressed?
-        jsr KERNAL_STOP                                 ; A+ X- - C+ N+ V- Z+
-        if_eq_then
-            sec
-            bcs COPY::_end
-        else_end
+        from_loop COPY
+            jsr CLRCHN                                  ; so second IN_CHKIN doesn't see device busy
+            bit IN_STATUS
+            bvs COPY::_end                              ; EOI -> break
+            jsr IN_CHKIN                                ; A- X- Y- C+
+            jsr KERNAL_CHRIN                            ; A+ X+ Y- C0 N+ V+ Z+
+            tay
+            jsr KERNAL_READST
+            sta IN_STATUS
+            ; bit 7: device not present: basically cannot happen anymore
+            ; bit 6: end of input
+            ; bit 1: timeout
+            and # < ~ KERNAL_IO_EOI
+            bne _catch                                  ; ERROR -> throw
+            tya
+            jsr OUT_CHKOUT                              ; A- X- Y- C+
+            jsr KERNAL_CHROUT
+            jsr KERNAL_READST
+            sta OUT_STATUS
+            bne _catch                                  ; ERROR -> throw
 
-        jsr PAUSE_ON_SHIFT                              ; A+ X- Y-
-    next
-        jmp _loop
-    end
+            ; STOP key pressed?
+            jsr KERNAL_STOP                             ; A+ X- - C+ N+ V- Z+
+            if_eq_then
+                sec
+                bcs COPY::_end                          ; Cancel -> break
+            else_end
+
+            jsr PAUSE_ON_SHIFT                          ; A+ X- Y-
+        next
+            jmp _loop
+        end
+    catch_finally_end
 
     rts
 .endproc
@@ -2591,10 +2567,29 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             iny
         next
             inx
-            cpx # 2
-            bcc _loop
-        end
-    else_end
+            from_loop
+                lda BX,x
+                lsr
+                lsr
+                lsr
+                lsr
+                ora # PETSCII_DIGIT_ZERO
+                jsr KERNAL_CHROUT                       ; A- X- Y- C0 N+ V+ Z+
+                lda ZPKERNAL_STATUS
+                bne _catch
+                lda BX,x
+                and # $0F
+                ora # PETSCII_DIGIT_ZERO
+                jsr KERNAL_CHROUT                       ; A- X- Y- C0 N+ V+ Z+
+                lda ZPKERNAL_STATUS
+                bne _catch
+            next
+                inx
+                cpx # 2
+                bcc _loop
+            end
+        else_end
+    catch_finally_end
 
     lda # PETSCII_NUL
     sta AX,y
@@ -2650,9 +2645,13 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     sta AL
     lda TABLE_ERROR_MESSAGE_HI,x
     sta AH
-    jsr OUT_PUT_STRING_NON_REDIRECTING_ZSTRING_AX
+
+    ; IN = KEYBOARD , OUT = SCREEN
+    jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0
+
+    jsr OUT_PUT_STRING_ZSTRING_AX
     lda # PETSCII_RETURN
-    jsr KERNAL_CHROUT
+    jsr KERNAL_CHROUT                                   ; A- X- Y- C0
 
     sec                                                 ; FAIL
 
@@ -2670,79 +2669,75 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; check I = 1
 
     ; Check for and prevent re-entry
+    bit NMI_ENTRY_COUNT
+    if_mi_then
+        ; Already in an NMI call (not sure how this could happen, maybe on bouncing RESTORE key)
+        rti
+    else_end
+
+    ; First entry
     pha
-        lda NMI_ENTRY_COUNT
-        if_ne_then
-            ; Already in an NMI call (not sure how this could happen, maybe on bouncing RESTORE key)
-            pla
-            rti
-        else_end
-
-        ; First entry
-        txa
+    txa
+    pha
+        tya
         pha
-            tya
+            ; Disable all CIA-2 interrupts (why?)
+            lda # $7F
+            sta CIA_2_ICR
+            ; Process any pending CIA-2 interrupt.
+            ; NMI occured?
+            ldy CIA_2_ICR
+            if_mi_then
+                ; NMI occured yes
+                jmp KERNAL_NNMI20                   ; Continue at original Kernal NMI handler
+            else_end
+
+            ; NMI occured no
+            ; RESTORE key was pressed
+            ; STOP key pressed? Z=1 (eq): yes, Z=0 (ne): no
+            jsr KERNAL_STOP
+            if_ne_then
+                ; STOP key was not pressed
+                jmp KERNAL_NNMI20                       ; Continue at original Kernal NMI handler
+            else_end
+
+            ; STOP key was pressed
+
+            dec NMI_ENTRY_COUNT                         ; FALSE -> TRUE: prevent re-entry
+
+            ; Set text screen base to default (in case it got changed).
+            lda # >SCREEN_TEXT_RAM_BASE
+            sta KVAR_HIBASE
+
+            ; Save and restore colors because called Kernal routine changes them.
+            lda KVAR_COLOR
             pha
-                ; Disable all CIA-2 interrupts (why?)
-                lda # $7F
-                sta CIA_2_ICR
-                ; Process any pending CIA-2 interrupt.
-                ; NMI occured?
-                ldy CIA_2_ICR
-                if_mi_then
-                    ; NMI occured yes
-                    jmp KERNAL_NNMI20                   ; Continue at original Kernal NMI handler
-                else_end
-
-                ; NMI occured no
-                ; RESTORE key was pressed
-                ; STOP key pressed? Z=1 (eq): yes, Z=0 (ne): no
-                jsr KERNAL_STOP
-                if_ne_then
-                    ; STOP key was not pressed
-                    jmp KERNAL_NNMI20                   ; Continue at original Kernal NMI handler
-                else_end
-
-                ; STOP key was pressed
-
-                ; Prevent re-entry
-                inc NMI_ENTRY_COUNT
-
-                ; Set text screen base to default (in case it got changed).
-                lda # >SCREEN_TEXT_RAM_BASE
-                sta KVAR_HIBASE
-
-                ; Save and restore colors because called Kernal routine changes them.
-                lda KVAR_COLOR
+                lda VIC_EC
                 pha
-                    lda VIC_EC
+                    lda VIC_B0C
                     pha
-                        lda VIC_B0C
-                        pha
-                            jsr KERNAL_IOINIT
-                            ; Kernal ioinit:
-                            ; Also sets memory configuration to default: BASIC ROM, IO DEVICES, KERNAL ROM, Datasette output off motor off
-                            jsr KERNAL_CINT
-                            ; Kernal cint:
-                            ; Also sets default I/O: output dflto := 3 (screen), input dfltn := 0 (keyboard)
-                        pla
-                        sta VIC_B0C
+                        jsr KERNAL_IOINIT
+                        ; Kernal ioinit:
+                        ; Also sets memory configuration to default: BASIC ROM, IO DEVICES, KERNAL ROM, Datasette output off motor off
+                        jsr KERNAL_CINT
+                        ; Kernal cint:
+                        ; Also sets default I/O: output dflto := 3 (screen), input dfltn := 0 (keyboard)
                     pla
-                    sta VIC_EC
+                    sta VIC_B0C
                 pla
-                sta KVAR_COLOR
+                sta VIC_EC
+            pla
+            sta KVAR_COLOR
 
-                ; Restore stack pointer to where it was on NMI.
-                ldx SAVE_S
-                txs
+            ; Restore stack pointer to where it was on NMI.
+            ldx SAVE_S
+            txs
 
-                ; Enable interrupts so we can do file I/O.
-                cli
+            ; Enable interrupts so we can do file I/O.
+            cli
 
-               ;jsr RESET_FILE_IO ; RUN does this
-
-                dec NMI_ENTRY_COUNT                     ; Allow entry
-                jmp RUN                                 ; Resume
+            inc NMI_ENTRY_COUNT                     ; TRUE -> FALSE: allow entry
+            jmp RUN                                 ; Resume
 .endproc
 
 ;endregion
