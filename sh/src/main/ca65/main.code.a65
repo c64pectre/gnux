@@ -208,10 +208,10 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     sta SAVE_KERNAL_NMINV_HI
 
     ; Set our NMI handler
-    ;lda # <MY_NMI_HANDLER
-    ;sta KERNAL_NMINV_LO
-    ;lda # >MY_NMI_HANDLER
-    ;sta KERNAL_NMINV_HI
+    lda # <MY_NMI_HANDLER
+    sta KERNAL_NMINV_LO
+    lda # >MY_NMI_HANDLER
+    sta KERNAL_NMINV_HI
 
     rts
 .endproc
@@ -2678,7 +2678,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             jsr KERNAL_STOP
             if_ne_then
                 ; STOP key was not pressed
-                jmp KERNAL_NNMI20                   ; Continue at original Kernal NMI handler
+                jmp KERNAL_NNMI20                       ; Continue at original Kernal NMI handler
             else_end
 
             ; STOP key was pressed
