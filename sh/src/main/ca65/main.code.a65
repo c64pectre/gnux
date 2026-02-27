@@ -2567,29 +2567,10 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             iny
         next
             inx
-            from_loop
-                lda BX,x
-                lsr
-                lsr
-                lsr
-                lsr
-                ora # PETSCII_DIGIT_ZERO
-                jsr KERNAL_CHROUT                       ; A- X- Y- C0 N+ V+ Z+
-                lda ZPKERNAL_STATUS
-                bne _catch
-                lda BX,x
-                and # $0F
-                ora # PETSCII_DIGIT_ZERO
-                jsr KERNAL_CHROUT                       ; A- X- Y- C0 N+ V+ Z+
-                lda ZPKERNAL_STATUS
-                bne _catch
-            next
-                inx
-                cpx # 2
-                bcc _loop
-            end
-        else_end
-    catch_finally_end
+            cpx # 2
+            bcc _loop
+        end
+    else_end
 
     lda # PETSCII_NUL
     sta AX,y
