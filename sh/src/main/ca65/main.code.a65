@@ -1561,6 +1561,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     try
         ; Load address
         ; Reading the first two bytes never gives error, so we need not check.
+        jsr CLRCHN
         jsr IN_CHKIN
         jsr KERNAL_CHRIN                                ; A+ X+ Y- C0 N+ V+ Z+
         jsr KERNAL_CHRIN                                ; A+ X+ Y- C0 N+ V+ Z+
@@ -1570,6 +1571,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr KERNAL_CHROUT                               ; A+ X+ Y- C0 N+ V+ Z+
 
         from_loop OUTER
+            jsr CLRCHN
             jsr IN_CHKIN
             jsr KERNAL_CHRIN                            ; A+ X+ Y- C0 N+ V+ Z+
             beq OUTER::_end                             ; End of directory -> break
@@ -1581,11 +1583,12 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             sta AH
             jsr AX_UWORD_TO_DECIMAL_AX_BX_CX            ; A+ X+ Y+ AX+ BX+ CX+
 
-            jsr KERNAL_CHROUT                           ; A+ X+ Y- C0 N+ V+ Z+
+            jsr OUT_CHKOUT
             jsr OUT_PUT_ZSTRING_AX_BX_CX
             lda # PETSCII_SPACE
             jsr KERNAL_CHROUT
             from_loop INNER
+                jsr CLRCHN
                 jsr IN_CHKIN
                 jsr KERNAL_CHRIN
                 ldx ZPKERNAL_STATUS
