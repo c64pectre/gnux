@@ -979,7 +979,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
                 bcc _end                                ; C=0 -> No
                 ; check C=1                             ; Yes
             then
-                jsr PUT_LINE_DISK_STATUS                     ; A+ X+ Y+ P-
+                jsr PUT_LINE_DISK_STATUS                ; A+ X+ Y+ P-
                 ; check C=1
             else_end
         else_end
@@ -1033,6 +1033,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; DISK_STATUS_TEXT = ""
     lda # PETSCII_NUL
     sta DISK_STATUS_TEXT
+
+    jsr CLRCHN                                          ; Just to be sure
 
     ; Set input
     ldx # DISK_COMMAND_LA
@@ -1222,9 +1224,6 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     jsr OUT_PUT_ZSTRING_AX
 
-    ; TODO Necessary?
-    jsr CLRCHN                                          ; A- X- Y- C0 DFLTN=0 DFLTO=3
-
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW | PROCESS_DISK_STATUS_ALWAYS
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | DFLTN=0 DFLTO=3
@@ -1273,10 +1272,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # PETSCII_COLON
     jsr KERNAL_CHROUT
 
+    ; FILE
     jsr OUT_PUT_ZSTRING_AX
-
-    ; TODO Necessary?
-    jsr CLRCHN                                          ; A- X- Y- C0 DFLTN=0 DFLTO=3
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
@@ -1348,9 +1345,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; AX = ARGV[1] = FROM
     lda # 1
     jsr GET_AX_ARGV_A
-
-    ; Necessary
-    jsr CLRCHN                                          ; A+ X+ Y- C=1 DFLTN=0 DFLTO=3
+    jsr OUT_PUT_ZSTRING_AX
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
