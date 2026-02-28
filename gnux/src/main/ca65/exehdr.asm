@@ -1,4 +1,4 @@
-;    boot: Boot.
+;    gnux: Boot.
 ;    Copyright (C) 2026 C64PECTRE
 ;
 ;    This program is free software: you can redistribute it and/or modify
@@ -16,9 +16,9 @@
 ;
 ;    Contact: https://github.com/c64pectre/gnux/ create an issue
 
-.include "launcher.import.inc"
+.include "c64/basic.inc"
 
-.segment "JUMPER"
-.include "jumper.code.a65"
+.segment "EXEHDR"
+.include "exehdr.code.a65"
 
-.include "jumper.export.a65"
+.include "exehdr.export.a65"

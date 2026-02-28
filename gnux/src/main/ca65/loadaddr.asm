@@ -1,4 +1,4 @@
-;    boot: Boot.
+;    gnux: Boot.
 ;    Copyright (C) 2026 C64PECTRE
 ;
 ;    This program is free software: you can redistribute it and/or modify
