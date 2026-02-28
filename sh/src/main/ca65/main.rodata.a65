@@ -66,6 +66,9 @@ RESOURCE_ZSTRING_SEQ_WRITE:
 RESOURCE_STRING_EMPTY:
     .asciiz ""
 
+RESOURCE_ZSTRING_DIR_NAME:
+    .asciiz "$"
+
 ;endregion
 
 ;region Map Command name to command number

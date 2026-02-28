@@ -44,8 +44,6 @@ ARGC_MAX = 10
 
 ARGV_SIZE = ARGC_MAX
 
-PROGRAM_ENTRYPOINT = $1800                              ; Entry point of loaded program
-
 FILE_NAME_MAX_LENGTH = 16
 
 DISK_NAME_MAX_LENGTH = 16

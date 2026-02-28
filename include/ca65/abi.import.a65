@@ -32,3 +32,5 @@
 .import GNUX_PARGV
 .import GNUX_PARGV_LO
 .import GNUX_PARGV_HI
+
+.import PROGRAM_ENTRYPOINT
