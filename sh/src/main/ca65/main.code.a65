@@ -102,9 +102,9 @@ DISK_STATUS_TEXT                := AREA_4 + 24 + 19 + 41
 DISK_STATUS_TEXT_CODE_0         := DISK_STATUS_TEXT + 0
 DISK_STATUS_TEXT_CODE_1         := DISK_STATUS_TEXT + 1
 
-;;; summary: Name of loaded program, if any (then LOADED_PROGRAM_NAME[0] == 0) $03A6-$03B4 (14 bytes)
-LOADED_PROGRAM_NAME             := AREA_4 + 24 + 19 + 41 + 35
-LOADED_PROGRAM_NAME_SIZE        = FILE_NAME_MAX_LENGTH + 1
+;;; summary: Name of loaded program, if any (then LOADED_COMMAND_NAME[0] != 0) $03A6-$03B4 (14 bytes)
+LOADED_COMMAND_NAME             := AREA_4 + 24 + 19 + 41 + 35
+LOADED_COMMAND_NAME_SIZE        = FILE_NAME_MAX_LENGTH + 1
 
 ; Save colors
 SAVE_KVAR_COLOR                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1
@@ -199,7 +199,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     sta GNUX_OUT_LA                                     ; 0 = Screen
 
     ; Set no program loaded
-    sta LOADED_PROGRAM_NAME
+    sta LOADED_COMMAND_NAME
 
     ; Save NMI handler
     lda KERNAL_NMINV_LO
@@ -239,7 +239,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .proc SHOW_PROMPT
     ldx # < RESOURCE_ZSTRING_PROMPT
     ldY # > RESOURCE_ZSTRING_PROMPT
-    jsr PUT_ZSTRING_XY
+    jsr PUT_ZSTRING_XY                                  ; BX+
 
     rts
 .endproc
@@ -803,11 +803,13 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ BX+
+;;; notes:
+;;;   Do not change AX
 .proc LOAD_COMMAND_IF_NOT_ALREADY_LOADED
     ; Already loaded?
-    lda # < LOADED_PROGRAM_NAME
+    lda # < LOADED_COMMAND_NAME
     sta BL
-    lda # > LOADED_PROGRAM_NAME
+    lda # > LOADED_COMMAND_NAME
     sta BH
     jsr ZSTRING_AX_COMPARE_ZSTRING_BX                   ; A+ X- Y+ Z+
     if_eq_then
@@ -815,7 +817,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    jsr LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK
+    jsr LOAD_COMMAND_FROM_WORK_OR_SYS_DISK
 
     rts
 .endproc
@@ -825,15 +827,17 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   AX: ZSTRING: Name of program to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-.proc LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK
+;;; notes:
+;;;   Do not change AX
+.proc LOAD_COMMAND_FROM_WORK_OR_SYS_DISK
     ; Try work disk
     ldx GNUX_WORK_DEVICE
-    jsr LOAD_PROGRAM
+    jsr LOAD_COMMAND
     if_cs_then
         ; Load from work disk failed.
         ; Try system disk
         ldx GNUX_SYS_DEVICE
-        jsr LOAD_PROGRAM
+        jsr LOAD_COMMAND
         if_cs_then
             ; Load from system disk failed too.
             ; X = ERROR_NUMBER_*
@@ -845,9 +849,9 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Save name of loaded program.
     ; notes: We know program name is max 16 characters + 1 for NUL
-    lda # < LOADED_PROGRAM_NAME
+    lda # < LOADED_COMMAND_NAME
     sta BL
-    lda # > LOADED_PROGRAM_NAME
+    lda # > LOADED_COMMAND_NAME
     sta BH
     jsr ZSTRING_AX_COPY_TO_ZSTRING_BX                   ; A+ X- Y+
 
@@ -862,8 +866,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   AX: ZSTRING: COMMAND
 ;;; changed: A+ X+ Y+ BX+ DX+
 ;;; notes:
-;;;   AX is not changed because caller may want to save the file name if loaded.
-.proc LOAD_PROGRAM
+;;;   Do not change AX
+.proc LOAD_COMMAND
     ; check AX.LENGTH <= FILE_NAME_MAX_LENGTH
     stx DL                                              ; DL = X = DEVICE
 
@@ -919,7 +923,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   BX: ZSTRING: Target string
 ;;; changed: A+ X+ Y+
 ;;; notes:
-;;;   We did not have any more free registers in `LOAD_PROGRAM` so we could
+;;;   We did not have any more free registers in `LOAD_COMMAND` so we could
 ;;;   not use a generic routine instead.
 .proc ZSTRING_BX_APPEND_DOT_SH
     jsr ZSTRING_BX_LENGTH
@@ -947,43 +951,42 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; sumary: Process disk status:
 ;;; in:
-;;;   X: Device address
-;;;   A: PROCESS_DISK_STATUS_* flags
+;;;   A: FLAGS: PROCESS_DISK_STATUS_* flags
+;;;   X: DA: Device Address
 ;;; out:
 ;;;   C: 0=OK 1=ERROR
-;;; changed: A+ X+ Y+ C+
+;;; changed: A+ X+ Y+ C+ BX+ CL+
 .proc PROCESS_DISK_STATUS
-    pha
-        clc                                             ; C0
-        and # PROCESS_DISK_STATUS_OPEN                  ; A+ N+ Z+
-        if_ne_then
-            jsr OPEN_DISK_COMMAND_STATUS_CHANNEL        ; A+ X+ Y+ C+
-        else_end
+    sta CL                                              ; CL = FLAGS
+    clc                                                 ; C0
+    and # PROCESS_DISK_STATUS_OPEN                      ; A+ N+ Z+
+    if_ne_then
+        jsr OPEN_DISK_COMMAND_STATUS_CHANNEL            ; A+ X+ Y+ C+
+    else_end
 
-        if_cc_then
-            jsr READ_DISK_STATUS                        ; A+ X+ Y+ C+
-        else_end
+    if_cc_then
+        jsr READ_DISK_STATUS                            ; A+ X+ Y+ C+
+    else_end
 
-        if_cc_then
-            ; Check disk status: "00" is OK, else is error
-            jsr CHECK_DISK_STATUS                       ; A+ X- Y- C+
-            if
-                pla
-                pha
-                and # PROCESS_DISK_STATUS_SHOW          ; A+ N+ Z+
-                beq _end                                ; ~SHOW -> No
-                pla
-                pha
-                and # PROCESS_DISK_STATUS_ALWAYS        ; A+ N+ Z+
-                bne _then                               ; ALWAYS -> Yes
-                bcc _end                                ; C=0 -> No
-                ; check C=1                             ; Yes
-            then
-                jsr PUT_LINE_DISK_STATUS                ; A+ X+ Y+ P-
-                ; check C=1
-            else_end
+    if_cc_then
+        ; Check disk status: "00" is OK, else is error
+        jsr CHECK_DISK_STATUS                           ; A+ X- Y- C+
+        if
+            lda CL                                      ; A = FLAGS
+            and # PROCESS_DISK_STATUS_SHOW              ; A+ N+ Z+
+            beq _end                                    ; ~SHOW -> No
+            lda CL                                      ; A = FLAGS
+            and # PROCESS_DISK_STATUS_ALWAYS            ; A+ N+ Z+
+            bne _then                                   ; ALWAYS -> Yes
+            bcc _end                                    ; C=0 -> No
+            ; check C=1                                 ; Yes
+        then
+            jsr PUT_LINE_DISK_STATUS                    ; A+ X+ Y+ P- BX+
+            ; check C=1
         else_end
-    pla
+    else_end
+
+    lda CL                                              ; A = FLAGS
     and # PROCESS_DISK_STATUS_CLOSE                     ; A+ N+ Z+
     if_ne_then
         jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL           ; A+ X+ Y+ P-
@@ -1000,11 +1003,11 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; changed: A+ X+ Y- C+
 ;;; notes: Basically never fails because there is no file name
 .proc OPEN_DISK_COMMAND_STATUS_CHANNEL
-    lda # 0
-    jsr KERNAL_SETNAM                                   ; A- X- Y-
     lda # DISK_COMMAND_LA_SA
     tay
     jsr KERNAL_SETLFS                                   ; A=LA X=DA Y=SA | A- X- Y-
+    lda # 0
+    jsr KERNAL_SETNAM                                   ; A- X- Y-
     jsr KERNAL_OPEN                                     ; A+ X+ Y- C+
 
     rts
@@ -1095,24 +1098,12 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .endproc
 
 ;;; summary: Print disk status
-;;; changed: A+ X+ Y+ P-
+;;; changed: A+ X+ Y+ P- BX+
 .proc PUT_LINE_DISK_STATUS
     php
-        from
-            ldx # 0
-        loop
-            lda DISK_STATUS_TEXT , x
-            tay
-            jsr PUT_BYTE                                ; A+ X- Y- C+ N+ V+ Z+ STATUS+
-            tya
-            beq _end                                    ; break
-        next
-            inx
-            bne _loop                                   ; bra
-        end
-
-        lda # PETSCII_RETURN
-        jsr PUT_BYTE                                    ; A+ X- Y- C+ N+ V+ Z+ STATUS+
+        ldx # < DISK_STATUS_TEXT
+        ldy # > DISK_STATUS_TEXT
+        jsr PUT_LINE_ZSTRING_XY                         ; BX+
     plp
 
     rts
@@ -1163,7 +1154,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    jsr LOAD_COMMAND_IF_NOT_ALREADY_LOADED              ; in BX
+    jsr LOAD_COMMAND_IF_NOT_ALREADY_LOADED
 
     rts
 .endproc
@@ -1222,7 +1213,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    jsr OUT_PUT_ZSTRING_AX
+    jsr PUT_ZSTRING_AX                                  ; BX+
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW | PROCESS_DISK_STATUS_ALWAYS
@@ -1626,7 +1617,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     jsr OUT_CHKOUT                                      ; A- X- Y- C+
     ldx # < RESOURCE_ZSTRING_DEVICE
     ldy # > RESOURCE_ZSTRING_DEVICE
-    jsr OUT_PUT_ZSTRING_XY
+    jsr OUT_PUT_ZSTRING_XY                              ; AX+
 
     ; AX := [DX]                                        ; DEVICE
     ldy # 0
@@ -2018,27 +2009,41 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X#Y: ZSTRING: String to write
 ;;; out:
 ;;;   C: Error? 0: FALSE , 1: TRUE
-;;; changed: A+ X- Y+ C+ N+ V+ Z+ AX+
+;;; changed: A+ X- Y+ C+ N+ V+ Z+ BX+
 .proc PUT_ZSTRING_XY
-    stx AL
-    sty AH
-    jsr PUT_ZSTRING_AX
+    stx BL
+    sty BH
+    jsr PUT_ZSTRING_BX
+
+    rts
+.endproc
+
+;;; summary: Write string to output channel with RETURN
+;;; in:
+;;;   X#Y: ZSTRING: String to write
+;;; out:
+;;;   C: Error? 0: FALSE , 1: TRUE
+;;; changed: A+ X- Y+ C+ N+ V+ Z+ BX+
+.proc PUT_LINE_ZSTRING_XY
+    jsr PUT_ZSTRING_XY
+    lda # PETSCII_RETURN
+    jsr PUT_BYTE
 
     rts
 .endproc
 
 ;;; summary: Write string to output channel
 ;;; in:
-;;;   AX: ZSTRING: String to write
+;;;   BX: ZSTRING: String to write
 ;;; out:
 ;;;   C: Error? 0: FALSE , 1: TRUE
 ;;; changed: A+ X- Y+ C+ N+ V+ Z+
-.proc PUT_ZSTRING_AX
+.proc PUT_ZSTRING_BX
     try
         from
             ldy # 0
         loop
-            lda [AX],y                                  ; A+ N+ Z+
+            lda [BX],y                                  ; A+ N+ Z+
             beq _end                                    ; NUL -> break
             jsr PUT_BYTE                                ; A+ X- Y- C+ N+ V+ Z+
             bcs _catch
@@ -2051,19 +2056,18 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; summary: Write string to output channel with a RETURN
+;;; summary: Write string to output channel
 ;;; in:
 ;;;   AX: ZSTRING: String to write
 ;;; out:
 ;;;   C: Error? 0: FALSE , 1: TRUE
 ;;; changed: A+ X- Y+ C+ N+ V+ Z+
-.proc PUT_LINE_ZSTRING_AX
-    try
-        jsr PUT_ZSTRING_AX
-        bcs _catch                                      ; error -> throw
-        lda # PETSCII_RETURN
-        jsr PUT_BYTE                                    ; A+ X- Y- C+ N+ V+ Z+
-    catch_finally_end
+.proc PUT_ZSTRING_AX
+    lda AL
+    sta BL
+    lda AH
+    sta BH
+    jsr PUT_ZSTRING_BX
 
     rts
 .endproc
@@ -2664,17 +2668,16 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: Error number
 ;;; out:
 ;;;   C=1
-;;; changed: A+ X+ Y+ AX+
+;;; changed: A+ X+ Y+ BX+
 .proc PUT_ERROR_X_NUMBER
+    ldy TABLE_ERROR_MESSAGE_HI,x
     lda TABLE_ERROR_MESSAGE_LO,x
-    sta AL
-    lda TABLE_ERROR_MESSAGE_HI,x
-    sta AH
+    tax
 
     ; IN = KEYBOARD , OUT = SCREEN
     jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0
 
-    jsr PUT_LINE_ZSTRING_AX
+    jsr PUT_LINE_ZSTRING_XY
 
     sec                                                 ; FAIL
 
