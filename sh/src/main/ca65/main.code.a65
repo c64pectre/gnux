@@ -1658,11 +1658,13 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ldy # > RESOURCE_ZSTRING_DEVICE
     jsr OUT_PUT_STRING_XY_USING_AX
 
-    ; A: UBYTE := [DX]                                  ; DEVICE
+    ; AX := [DX]                                        ; DEVICE
     ldy # 0
     lda [DX],y
+    sta AL
+    sty AH
 
-    jsr A_UBYTE_TO_DECIMAL_AX_BX                        ; A+ X+ Y+ AX+ BX+
+    jsr AX_UWORD_TO_DECIMAL_AX_BX_CX                    ; A+ X+ Y+ AX+ BX+
 
     jsr OUT_PUT_ZSTRING_AX_BX_CX
 
@@ -2604,95 +2606,6 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         next
             inx
             cpx # 3
-            bcc _loop
-        end
-    else_end
-
-    lda # PETSCII_NUL
-    sta AX,y
-
-    rts
-.endproc
-
-;;; summary: Put unsigned byte to OUT as decimal
-;;; in:
-;;;  A: UBYTE: VALUE
-;;; changed: A+ X+ Y+ AX+ BX+
-;;; notes:
-;;;   Disables interrupts because it uses Decimal mode.
-;;;   Result has no leading zeros.
-;;;   Source value is destroyed.
-.proc A_UBYTE_TO_DECIMAL_AX_BX
-    sta AL
-    ; Zero out result
-    ldy # 0
-    sty BL                                              ; HI
-    sty BH                                              ; LO
-    ldx # 8                                             ; Bit counter
-    sei                                                 ; Because IRQ/NMI handlers use (or may use) adc/sbc
-        sed
-            from_loop
-                asl AL
-                lda BH
-                adc BH
-                sta BH
-                lda BL
-                adc BL
-                sta BL
-            next
-                dex
-                bne _loop
-            end
-        cld
-    cli
-
-    from_loop
-        lda BX,x
-        bne _end                                        ; A != 0 -> break
-    next
-        ; A=0
-        inx
-        cpx # 2
-        bne _loop
-    end
-
-    ; X <= 2 ; Y=0
-    ; (x = 2) = (A = 0)
-    pha
-        lsr
-        lsr
-        lsr
-        lsr
-        if_ne_then
-            ora # PETSCII_DIGIT_ZERO
-            sta AX,y
-            iny
-        else_end
-    pla
-    and # $0F
-    ora # PETSCII_DIGIT_ZERO
-    sta AX,y
-    iny
-    cpx # 1
-    if_lt_then
-        inx
-        from_loop
-            lda BX,x
-            lsr
-            lsr
-            lsr
-            lsr
-            ora # PETSCII_DIGIT_ZERO
-            sta AX,y
-            iny
-            lda BX,x
-            and # $0F
-            ora # PETSCII_DIGIT_ZERO
-            sta AX,y
-            iny
-        next
-            inx
-            cpx # 2
             bcc _loop
         end
     else_end
