@@ -5,10 +5,3 @@
 ;;; break [load|store|exec] [address [address] [if <cond_expr>]]
 ;;; default is exec
 ;;; example: break .BREAK1
-
-break .BREAK1
-break .BREAK2
-break .BREAK3
-break .BREAK4
-break .BREAK5
-break .STREAM_COPY_IN_TO_OUT

@@ -1667,7 +1667,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     jsr OUT_PUT_ZSTRING_AX_BX_CX
 
     lda # PETSCII_RETURN
-    jsr KERNAL_CHROUT
+    jsr OUT_PUT_BYTE
 
     rts
 .endproc
