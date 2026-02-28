@@ -17,3 +17,6 @@
 ;    Contact: https://github.com/c64pectre/gnux/ create an issue
 
 .include "c64/kernal-r3.export.asm"
+.include "c64/kernal-r3-internal.export.asm"
+.include "c64/basic-internal.export.asm"
+.include "c64/registers.export.asm"
