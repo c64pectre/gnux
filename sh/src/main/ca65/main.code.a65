@@ -2738,6 +2738,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             sta KVAR_HIBASE
 
             ; Save and restore colors because called Kernal routine changes them.
+            ; We cannot use configured colors because a program could use different colors
             lda KVAR_COLOR
             pha
                 lda VIC_EC
@@ -2763,6 +2764,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
             ; Enable interrupts so we can do file I/O.
             cli
+
+            jsr RESET_FILE_IO
 
             inc NMI_ENTRY_COUNT                     ; TRUE -> FALSE: allow entry
             jmp RUN                                 ; Resume
