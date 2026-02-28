@@ -27,13 +27,13 @@ LOBASIC_NEWSTT := $A7AE
 
 ; region Launcher
 
-; Load "load" program
+;;; summary: Launch: load and execute "sh"
 .proc LAUNCH
     ; Turn off "searching for FILE" message
     lda # KERNAL_MSG_OFF
     jsr KERNAL_SETMSG
 
-    ; Display "boot" message
+    ; Display launching message
     ldx # < RESOURCE_STRING_MSG_LAUNCHING
     ldy # > RESOURCE_STRING_MSG_LAUNCHING
     jsr OUT_PUTS_ZSTRING_XY
@@ -105,7 +105,7 @@ LOBASIC_NEWSTT := $A7AE
 RESOURCE_STRING_FILENAME: .byte "sh" , PETSCII_NUL
 FILENAME_LENGTH = 2
 
-RESOURCE_STRING_MSG_LAUNCHING: .byte PETSCII_RETURN , "boot" , PETSCII_RETURN , PETSCII_NUL
+RESOURCE_STRING_MSG_LAUNCHING: .byte PETSCII_RETURN , "gnux" , PETSCII_RETURN , PETSCII_NUL
 
 RESOURCE_STRING_MSG_FAIL: .byte "fail" , PETSCII_RETURN , PETSCII_NUL
 
