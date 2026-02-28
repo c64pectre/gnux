@@ -18,8 +18,8 @@
 
 .export GNUX_SYS_DEVICE         := $0334
 .export GNUX_WORK_DEVICE        := $0335
-.export GNUX_IN_FA              := $0336    ; 0: keyboard
-.export GNUX_OUT_FA             := $0337    ; 0: screen
+.export GNUX_IN_LA              := $0336    ; 0: keyboard
+.export GNUX_OUT_LA             := $0337    ; 0: screen
 
 ;;; summary: Argument count
 .export GNUX_ARGC               := $033C

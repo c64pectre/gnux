@@ -28,6 +28,9 @@ present, because `open` does `listen`. On the other hand, `open` without a filen
 ## `chkin` and `chkout`
 
 `chkin` (talking) can fail when the same device is already selected for output with `chkout` (listening).
+You need to `clrchn` before calling `chkin`.
+
+Dunno, seems to work fine with me without calling `clrchn`.
 
 ## Do not use `clall`
 

@@ -18,8 +18,8 @@
 
 .import GNUX_SYS_DEVICE
 .import GNUX_WORK_DEVICE
-.import GNUX_IN_FA
-.import GNUX_OUT_FA
+.import GNUX_IN_LA
+.import GNUX_OUT_LA
 .import GNUX_IN_LAST_CHKIN_FA
 .import GNUX_OUT_LAST_CHKOUT_FA
 
