@@ -1,4 +1,4 @@
-;    boot: Boot.
+;    gnux: Boot.
 ;    Copyright (C) 2026 C64PECTRE
 ;
 ;    This program is free software: you can redistribute it and/or modify
@@ -16,4 +16,4 @@
 ;
 ;    Contact: https://github.com/c64pectre/gnux/ create an issue
 
-.import LAUNCH
+.include "c64/basic-internal.export.asm"

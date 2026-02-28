@@ -1,4 +1,4 @@
-;    boot: Boot.
+;    gnux: Boot.
 ;    Copyright (C) 2026 C64PECTRE
 ;
 ;    This program is free software: you can redistribute it and/or modify
@@ -16,5 +16,14 @@
 ;
 ;    Contact: https://github.com/c64pectre/gnux/ create an issue
 
-.export BASIC_MEMORY_BEGIN
-.export BASIC_MEMORY_END
+.include "c64/petscii.inc"
+.include "c64/kernal-r3.inc"
+.include "c64/kernal-r3-internal.inc"
+.include "c64/basic-internal.inc"
+.include "c64/registers.inc"
+.include "structured-programming.inc"
+
+.segment "LAUNCHER"
+.include "launcher.code.a65"
+
+.include "launcher.export.a65"
