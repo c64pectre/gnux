@@ -30,3 +30,5 @@
 .export GNUX_PARGV              := $033E
 .export GNUX_PARGV_LO           := GNUX_PARGV + 0
 .export GNUX_PARGV_HI           := GNUX_PARGV + 1
+
+.export PROGRAM_ENTRYPOINT      := $1800                ; Entry point of loaded program
