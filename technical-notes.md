@@ -1,5 +1,18 @@
 # Technical Notes
 
+# On ca65 scopes
+
+Sometimes, when using scopes in `ca65`:
+
+    .scope MY_SCOPE
+
+        ...
+
+    .endscope
+
+, the assembler might treat symbols declared explicitly as zeropoage outside the scope as absolute,
+without issuing a warning. Thus, always prefix zero page symbols with `z:`.
+
 ## Detecting device not present
 
 The Kernal routine `chkin` sends a `talk` (along with talk secondary) on the serial bus and it then
