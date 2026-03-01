@@ -44,7 +44,7 @@ LOBASIC_NEWSTT := $A7AE
     ldy # > RESOURCE_STRING_FILENAME
     jsr KERNAL_SETNAM
     lda # 1                             ; la
-    ldx ZPKERNAL_FA                     ; fa e.g. device 8 (disk)
+    ldx z:ZPKERNAL_FA                   ; fa e.g. device 8 (disk)
     ldy # 1                             ; sa
     jsr KERNAL_SETLFS
     lda # 0                             ; Use load address from in file
@@ -77,8 +77,8 @@ LOBASIC_NEWSTT := $A7AE
 
 ;;; summary: Put string to console
 .proc OUT_PUTS_ZSTRING_XY
-    stx AL
-    sty AH
+    stx z:AL
+    sty z:AH
     from
         ldy # 0
     loop

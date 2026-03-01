@@ -146,8 +146,8 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     stx SAVE_S
 
     ldx # REGISTER_STACK
-    stx RP
-    stx FP
+    stx z:RP
+    stx z:FP
 
     ; Set border color
     lda CONFIG_BORDER_COLOR
@@ -177,7 +177,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     sta GNUX_WORK_DEVICE
 
     ; Set system and work device to device number of current file, if any.
-    lda ZPKERNAL_FA
+    lda z:ZPKERNAL_FA
     if_ne_then
         sta GNUX_SYS_DEVICE
         sta GNUX_WORK_DEVICE
@@ -298,9 +298,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     from ITERATE_COMMAND_LINE
         ; POINTER TO BYTE DX := & COMMAND_LINE
         lda # < COMMAND_LINE
-        sta DL
+        sta z:DL
         lda # > COMMAND_LINE
-        sta DH
+        sta z:DH
     loop
         ; check Y = 0
         jsr SKIP_BLANKS                                 ; A+ X- Y-
@@ -312,7 +312,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         if_eq_then
             ; Yes
             ; Skip '<'
-            inc DL
+            inc z:DL
             jsr REDIRECT_INPUT_FROM_FILE                ; A+ X+ Y+ AX+ BX+
             ldy # 0
             bcc ITERATE_COMMAND_LINE::_loop             ; OK -> continue
@@ -328,13 +328,13 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         cmp # PETSCII_GREATER_THAN_SIGN
         if_eq_then
             ; Skip '>'
-            inc DL
+            inc z:DL
             ; check Y = 0
             lda [DX],y
             cmp # PETSCII_GREATER_THAN_SIGN
             if_eq_then
                 ; Skip second '>'
-                inc DL
+                inc z:DL
                 ; Redirect output to printer
                 jsr REDIRECT_OUTPUT_TO_PRINTER          ; A+ X+ Y+ C+
                 ldy # 0
@@ -366,7 +366,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         pha
             cmp # PETSCII_QUOTATION_MARK
             if_eq_then
-                inc DL
+                inc z:DL
             else_end
 
             jsr SET_ARGV                                ; A+ X- Y=0
@@ -387,7 +387,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         lda # PETSCII_NUL
         ; check Y = 0
         sta [DX],y
-        inc DL
+        inc z:DL
     next
         bne ITERATE_COMMAND_LINE::_loop                 ; bra
     end
@@ -430,17 +430,17 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc GET_AX_ARGV_A
     ; AX := GNUX_PARGV[A]
     ldy GNUX_PARGV_LO
-    sty AL
+    sty z:AL
     ldy GNUX_PARGV_HI
-    sty AH
+    sty z:AH
     asl
     tay
     lda [AX],y
     tax
     iny
     lda [AX],y
-    sta AH
-    stx AL
+    sta z:AH
+    stx z:AL
 
     rts
 .endproc
@@ -461,13 +461,13 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     
         cmp # PETSCII_SPACE
         if_eq_then
-            inc DL
+            inc z:DL
             bne _loop                                   ; SPACE -> continue
         else_end
 
         cmp # PETSCII_NO_BREAK_SPACE
         if_eq_then
-            inc DL
+            inc z:DL
             bne _loop                                   ; NO_BREAK_SPACE -> continue
         else_end
     next_end
@@ -496,7 +496,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         cmp # PETSCII_NO_BREAK_SPACE
         beq _end                                        ; NO_BREAK_SPACE -> break
     next
-        inc DL
+        inc z:DL
         bne _loop                                       ; bra
     end
 
@@ -521,7 +521,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         cmp # PETSCII_QUOTATION_MARK
         beq _end                                        ; QUOTATION_MARK -> break
     next
-        inc DL
+        inc z:DL
         bne _loop                                       ; bra
     end
 
@@ -543,9 +543,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     asl
     tay
     ; POINTER TO WORD (ARGV + Y) := DX
-    lda DL
+    lda z:DL
     sta ARGV,y
-    lda DH
+    lda z:DH
     sta ARGV + 1,y
     inc GNUX_ARGC_LO
 
@@ -584,14 +584,14 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     pha
         cmp # PETSCII_QUOTATION_MARK
         if_eq_then
-            inc DL
+            inc z:DL
         else_end
 
         ; ZSTRING BX=FILE_NAME := POINTER_COMMAND_LINE
-        lda DL
-        sta BL
-        lda DH
-        sta BH
+        lda z:DL
+        sta z:BL
+        lda z:DH
+        sta z:BH
     pla
     cmp # PETSCII_QUOTATION_MARK
     if_eq_then
@@ -606,7 +606,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         ; A = SPACE or A = NO_BREAK_SPACE or A = QUOTATION_MARK
         lda # PETSCII_NUL
         sta [DX],y
-        inc DL
+        inc z:DL
     else_end
  
     jsr ZSTRING_AX_COPY_FROM_ZSTRING_BX                 ; A+ X- Y+
@@ -690,9 +690,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 
     ; Open with no name
     lda # < RESOURCE_STRING_EMPTY
-    sta AL
+    sta z:AL
     lda # > RESOURCE_STRING_EMPTY
-    sta AH
+    sta z:AH
     lda # REDIRECT_OUTPUT_LA
     ldx # REDIRECT_OUTPUT_PRINTER_DA
     ldy # REDIRECT_OUTPUT_PRINTER_SA
@@ -717,9 +717,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     else_end
 
     lda TABLE_COMMAND_HANDLER_LO,x
-    sta DL
+    sta z:DL
     lda TABLE_COMMAND_HANDLER_HI,x
-    sta DH
+    sta z:DH
 
     jsr JSR_INDIRECT_DX
 
@@ -744,19 +744,19 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
                     ; Call program's entrypoint, passing GNUX_ARGC and ARGV arguments.
                     ldx # REGISTER_STACK
                     lda GNUX_ARGC_LO
-                    sta 0,x
+                    sta z:0,x
                     inx
                     lda GNUX_ARGC_HI
-                    sta 0,x
+                    sta z:0,x
                     inx
                     lda GNUX_PARGV_LO
-                    sta 0,x
+                    sta z:0,x
                     inx
                     lda GNUX_ARGC_HI
-                    sta 0,x
+                    sta z:0,x
                     inx
-                    stx RP
-                    stx FP
+                    stx z:RP
+                    stx z:FP
                     ; Execute command/ run program
                     jsr PROGRAM_ENTRYPOINT
                 lda SAVE_VIC_B0C
@@ -805,9 +805,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc LOAD_COMMAND_IF_NOT_ALREADY_LOADED
     ; Already loaded?
     lda # < LOADED_COMMAND_NAME
-    sta BL
+    sta z:BL
     lda # > LOADED_COMMAND_NAME
-    sta BH
+    sta z:BH
     jsr ZSTRING_AX_COMPARE_ZSTRING_BX                   ; A+ X- Y+ Z+
     if_eq_then
         clc                                             ; OK
@@ -826,9 +826,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_COMMAND_NAME+
 .proc LOAD_COMMAND_FROM_WORK_OR_SYS_DISK
-    lda AL
+    lda z:AL
     sta LOAD_COMMAND_NAME_LO
-    lda AH
+    lda z:AH
     sta LOAD_COMMAND_NAME_HI
 
     ; Try work disk
@@ -851,9 +851,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     ; Save name of loaded program.
     ; notes: We know program name is max 16 characters + 1 for NUL
     lda # < LOADED_COMMAND_NAME
-    sta AL
+    sta z:AL
     lda # > LOADED_COMMAND_NAME
-    sta AH
+    sta z:AH
     ldx # < LOAD_COMMAND_NAME_LO
     ldy # > LOAD_COMMAND_NAME_HI
     jsr ZSTRING_AX_COPY_FROM_ZSTRING_XY                 ; A+ X- Y+ BX+
@@ -872,16 +872,16 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+
 .proc LOAD_COMMAND
     ; require LOAD_COMMAND_NAME.LENGTH <= FILE_NAME_MAX_LENGTH
-    stx DL                                              ; DL = X = DEVICE
+    stx z:DL                                            ; DL = X = DEVICE
     lda # LOAD_LA
     ldy # LOAD_SA
     jsr KERNAL_SETLFS
 
     ; AX := ZSTRING.NEW(DISK_COMMAND_TEXT).COPY_FROM(LOAD_COMMAND_NAME)
     lda # < DISK_COMMAND_TEXT
-    sta AL
+    sta z:AL
     lda # < DISK_COMMAND_TEXT
-    sta AH
+    sta z:AH
     ldx LOAD_COMMAND_NAME_LO
     ldy LOAD_COMMAND_NAME_HI
     jsr ZSTRING_AX_COPY_FROM_ZSTRING_XY
@@ -894,10 +894,10 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     ; Load
     jsr ZSTRING_AX_LENGTH
     tya
-    ldx AL
-    ldy AH
+    ldx z:AL
+    ldy z:AH
     jsr KERNAL_SETNAM
-    ldx DL                                              ; X = DL = DEVICE
+    ldx z:DL                                              ; X = DL = DEVICE
     lda # KERNAL_LOAD_LOAD
     jsr KERNAL_LOAD                                     ; No need to close
     if_cc_then
@@ -914,7 +914,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     else_end
 
     ; Device present. (Attempt to) read (but not show) disk status.
-    ldx DL                                              ; X = DL = DEVICE
+    ldx z:DL                                              ; X = DL = DEVICE
     lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
@@ -936,7 +936,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   C: 0=OK 1=ERROR
 ;;; changed: A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 .proc PROCESS_DISK_STATUS
-    sta CL                                              ; CL = FLAGS
+    sta z:CL                                            ; CL = FLAGS
     clc                                                 ; C0
     and # PROCESS_DISK_STATUS_OPEN                      ; A+ N+ Z+
     if_ne_then
@@ -951,10 +951,10 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         ; Check disk status: "00" is OK, else is error
         jsr CHECK_DISK_STATUS                           ; A+ X- Y- C+
         if
-            lda CL                                      ; A = FLAGS
+            lda z:CL                                    ; A = FLAGS
             and # PROCESS_DISK_STATUS_SHOW              ; A+ N+ Z+
             beq _end                                    ; ~SHOW -> No
-            lda CL                                      ; A = FLAGS
+            lda z:CL                                    ; A = FLAGS
             and # PROCESS_DISK_STATUS_ALWAYS            ; A+ N+ Z+
             bne _then                                   ; ALWAYS -> Yes
             bcc _end                                    ; C=0 -> No
@@ -965,7 +965,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         else_end
     else_end
 
-    lda CL                                              ; A = FLAGS
+    lda z:CL                                            ; A = FLAGS
     and # PROCESS_DISK_STATUS_CLOSE                     ; A+ N+ Z+
     if_ne_then
         jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL           ; A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
@@ -1397,9 +1397,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc CMD_WORK
     ; DX: POINTER TO UBYTE := & GNUX_SYS_DEVICE
     lda # < GNUX_WORK_DEVICE
-    sta DL
+    sta z:DL
     lda # > GNUX_WORK_DEVICE
-    sta DH
+    sta z:DH
     jsr SHOW_OR_CHANGE_DEVICE
 
     rts
@@ -1409,9 +1409,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc CMD_SYS
     ; DX: POINTER TO UBYTE := & GNUX_SYS_DEVICE
     lda # < GNUX_SYS_DEVICE
-    sta DL
+    sta z:DL
     lda # > GNUX_SYS_DEVICE
-    sta DH
+    sta z:DH
     jsr SHOW_OR_CHANGE_DEVICE
 
     rts
@@ -1436,14 +1436,14 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         rts
     else_end
 
-    stx DL                                              ; DL = X = DEVICE
+    stx z:DL                                            ; DL = X = DEVICE
 
     ; In case ARGC == 1
     ; AX := "$"
     lda # < RESOURCE_ZSTRING_DIR_NAME
-    sta AL
+    sta z:AL
     lda # > RESOURCE_ZSTRING_DIR_NAME
-    sta AH
+    sta z:AH
 
     lda GNUX_ARGC_LO
     cmp # 2
@@ -1461,10 +1461,10 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         else_end
 
         ; BX := AX
-        lda AL
-        sta BL
-        lda AH
-        sta BH
+        lda z:AL
+        sta z:BL
+        lda z:AH
+        sta z:BH
 
         ; AX := ZSTRING.NEW(DISK_COMMAND_TEXT)
         jsr ZSTRING_AX_NEW_DISK_COMMAND_TEXT            ; A+ X- Y- AX+
@@ -1481,7 +1481,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         jsr ZSTRING_AX_APPEND_ZSTRING_BX                ; A+ X- Y+ CX+
     else_end
 
-    ldx DL                                              ; X = DL = DEVICE
+    ldx z:DL                                            ; X = DL = DEVICE
     lda # FILE_LA
     ldy # 0                                             ; SA load indicator
     jsr OPEN_IN_FILE_AX                                 ; in A=LA X=DA Y=0=LOAD AX=FILENAME | A+ X+ Y+ C+ DFLTN=0 DFLTO=3
@@ -1491,7 +1491,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         rts
     else_end
 
-    ldx DL                                              ; A = DL = DEVICE
+    ldx z:DL                                            ; A = DL = DEVICE
     lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     if_cs_then
@@ -1515,9 +1515,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
             beq OUTER::_end                             ; End of directory -> break
             jsr IN_GET_BYTE                             ; A+ X+ Y- C0 N+ V+ Z+
             jsr IN_GET_BYTE                             ; A+ X+ Y- C0 N+ V+ Z+
-            sta AL
+            sta z:AL
             jsr IN_GET_BYTE                             ; A+ X+ Y- C0 N+ V+ Z+
-            sta AH
+            sta z:AH
             jsr AX_UWORD_TO_DECIMAL_AX_BX_CX            ; A+ X+ Y+ AX+ BX+ CX+
             jsr OUT_CHKOUT
             jsr OUT_PUT_ZSTRING_AX_BX_CX
@@ -1596,16 +1596,16 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc SHOW_DEVICE
     jsr OUT_CHKOUT                                      ; A- X- Y- C+
     lda # < RESOURCE_ZSTRING_DEVICE
-    sta AL
+    sta z:AL
     lda # > RESOURCE_ZSTRING_DEVICE
-    sta AH
+    sta z:AH
     jsr OUT_PUT_ZSTRING_AX
 
     ; AX := [DX]                                        ; DEVICE
     ldy # 0
     lda [DX],y
-    sta AL
-    sty AH
+    sta z:AL
+    sty z:AH
 
     jsr AX_UWORD_TO_DECIMAL_AX_BX_CX                    ; A+ X+ Y+ AX+ BX+
 
@@ -1646,7 +1646,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     if_cc_then
         ; Device is present
         ; [DX] := NEW_DEVICE
-        lda BL
+        lda z:BL
         ldy # 0
         sta [DX],y
     else_end
@@ -1685,9 +1685,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;; changed: A+ X- Y- AX+
 .proc ZSTRING_AX_NEW_DISK_COMMAND_TEXT
     lda # < DISK_COMMAND_TEXT
-    sta AL
+    sta z:AL
     lda # > DISK_COMMAND_TEXT
-    sta AH
+    sta z:AH
     lda # PETSCII_NUL
     sta DISK_COMMAND_TEXT
 
@@ -1772,8 +1772,8 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   ZSTRING AX   TARGET
 ;;; changed: A+ X- Y+ BX+ CX+
 .proc ZSTRING_AX_APPEND_ZSTRING_XY
-    stx BL
-    sty BH
+    stx z:BL
+    sty z:BH
     jsr ZSTRING_AX_APPEND_ZSTRING_BX                    ; A+ X- Y+ CX+
 
     rts
@@ -1787,25 +1787,25 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc ZSTRING_AX_APPEND_ZSTRING_BX
     from
         jsr ZSTRING_AX_LENGTH                           ; A+ X- Y+
-        sty CH                                          ; CH = I_TARGET
+        sty z:CH                                        ; CH = I_TARGET
         ldy # 0
-        sty CL                                          ; CL = I_SOURCE
+        sty z:CL                                        ; CL = I_SOURCE
     loop
         ; TARGET[I_TARGET] := SOURCE[I_SOURCE]
-        ldy CL
+        ldy z:CL
         lda [BX], y                                     ; A = SOURCE[I_SOURCE]
         beq _end                                        ; EOS -> break
-        ldy CH
+        ldy z:CH
         sta [AX],y                                      ; TARGET[I_TARGET] = A
     next
-        inc CL                                          ; I_SOURCE++
-        inc CH                                          ; I_TARGET++
+        inc z:CL                                        ; I_SOURCE++
+        inc z:CH                                        ; I_TARGET++
         bne _loop                                       ; bra
     end
 
     ; A = PETSCII_NUL
     ; TARGET[I_TARGET] := PETSCII_NUL
-    ldy CH
+    ldy z:CH
     sta [AX],y
 
     rts
@@ -1817,8 +1817,8 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   BX: SOURCE
 ;;; changed: A+ X- Y+ BX+
 .proc ZSTRING_AX_COPY_FROM_ZSTRING_XY
-    stx BL
-    sty BH
+    stx z:BL
+    sty z:BH
     jsr ZSTRING_AX_COPY_FROM_ZSTRING_BX                 ; A+ X- Y+
 
     rts
@@ -1853,7 +1853,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc CLRCHN
     jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C+ DFLTN=0 DFLTO=3
     lda # 0
-    sta ZPKERNAL_STATUS
+    sta z:ZPKERNAL_STATUS
     sta IN_STATUS
     sta OUT_STATUS
     clc                                                 ; C = 0
@@ -1908,8 +1908,8 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     jsr KERNAL_SETLFS                                   ; A=LA X=DA Y=SA | A- X- Y-
     jsr ZSTRING_AX_LENGTH                               ; A+ X- Y+
     tya
-    ldx AL
-    ldy AH
+    ldx z:AL
+    ldy z:AH
     jsr KERNAL_SETNAM                                   ; A=NAME.LENGTH X=<NAME Y=>NAME | A- X- Y-
     jsr KERNAL_OPEN                                     ; A+ X+ Y- C+
 
@@ -1937,8 +1937,8 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   C: Error? 0: FALSE , 1: TRUE
 ;;; changed: A+ X- Y+ C+ N+ V+ Z+ AX+
 .proc PUT_ZSTRING_XY
-    stx AL
-    sty AH
+    stx z:AL
+    sty z:AH
     jsr PUT_ZSTRING_AX
 
     rts
@@ -1982,17 +1982,17 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ BL+
 .proc OPEN_IN_FILE_AX
-    sta BL                                              ; BL = A = LA
+    sta z:BL                                            ; BL = A = LA
     lda GNUX_IN_LA
     if_ne_then
         ; Already open
         sec
     else_end
 
-    lda BL                                              ; A = BL = LA
+    lda z:BL                                            ; A = BL = LA
     jsr OPEN_FILE_AX                                    ; A+ X+ Y+
     if_cc_then
-        lda BL                                          ; A = BL = LA
+        lda z:BL                                        ; A = BL = LA
         sta GNUX_IN_LA
     else_end
 
@@ -2009,17 +2009,17 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ BL+
 .proc OPEN_OUT_FILE_AX
-    sta BL                                              ; BL = A = LA
+    sta z:BL                                            ; BL = A = LA
     lda GNUX_OUT_LA
     if_ne_then
         ; Already open
         sec
     else_end
 
-    lda BL                                              ; A = BL = LA
+    lda z:BL                                            ; A = BL = LA
     jsr OPEN_FILE_AX                                    ; A+ X+ Y+ C+
     if_cc_then
-        lda BL                                          ; A = BL = LA
+        lda z:BL                                        ; A = BL = LA
         sta GNUX_OUT_LA
     else_end
 
@@ -2061,7 +2061,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 
     ; Close all open files
     from_loop
-        ldx ZPKERNAL_LDTND
+        ldx z:ZPKERNAL_LDTND
         beq _end
         lda KVAR_LAT
         jsr KERNAL_CLOSE                                ; A+ X+ Y+ C+
@@ -2086,7 +2086,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc IN_CHKIN
     clc
     ldx # 0
-    stx ZPKERNAL_STATUS
+    stx z:ZPKERNAL_STATUS
     ldx GNUX_IN_LA
     if_ne_then
         jsr KERNAL_CHKIN                                ; A+ X+ Y- C+
@@ -2102,7 +2102,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc OUT_CHKOUT
     pha
         ldx # 0
-        stx ZPKERNAL_STATUS
+        stx z:ZPKERNAL_STATUS
         ldx GNUX_OUT_LA
         if_ne_then
             jsr KERNAL_CHKOUT                           ; A+ X+ Y- C+
@@ -2233,7 +2233,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         from
             ldx # 0
         loop
-            lda AX , x
+            lda z:AX , x
             beq _end                                    ; NUL -> break
             jsr OUT_PUT_BYTE                            ; A+ X- Y- C+ N+ V+ Z+ OUT_STATUS+
             bcs _catch                                  ; error -> throw
@@ -2330,19 +2330,19 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc ZSTRING_AX_DECIMAL_TO_UBYTE_A
     from
         ldy # 0
-        sty BL
+        sty z:BL
     loop
         lda [AX],y
         beq _end                                        ; A = NUL -> break
         ; BL := 10 * BL = (8 + 2) * BL = 8 * BL + 2 * BL = BL << 3 + BL + BL
-        lda BL
+        lda z:BL
         asl
         asl
         asl
         ; C=0
-        adc BL
-        adc BL
-        sta BL
+        adc z:BL
+        adc z:BL
+        sta z:BL
         ; BL += AX[Y] - '0'
         lda [AX],y
         ; "0" = $30 <= A <= "9" = $39
@@ -2350,14 +2350,14 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         sbc # PETSCII_DIGIT_ZERO
         ; 0 <= A <= 9 ; C = 1
         clc
-        adc BL
-        sta BL
+        adc z:BL
+        sta z:BL
     next
         iny
         bne _loop                                       ; bra
     end
 
-    lda BL
+    lda z:BL
 
     rts
 .endproc
@@ -2382,24 +2382,24 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .proc AX_UWORD_TO_DECIMAL_AX_BX_CX
     ; Zero out result
     ldy # 0
-    sty CL                                              ; LO
-    sty BH                                              ; MED
-    sty BL                                              ; HI
+    sty z:CL                                            ; LO
+    sty z:BH                                            ; MED
+    sty z:BL                                            ; HI
     ldx # 16                                            ; Bit counter
     sei
         sed
             from_loop
-                asl AL
-                rol AH
-                lda < CL
+                asl z:AL
+                rol z:AH
+                lda z:CL
                 adc z:CL
-                sta CL
-                lda BH
-                adc BH
-                sta BH
-                lda BL
-                adc BL
-                sta BL
+                sta z:CL
+                lda z:BH
+                adc z:BH
+                sta z:BH
+                lda z:BL
+                adc z:BL
+                sta z:BL
             next
                 dex
                 bne _loop
@@ -2415,7 +2415,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     ; | 0 |0-9|0-9|0-9|0-9|0-9|
 
     from_loop
-        lda BX,x
+        lda z:BX,x
         bne _end                                        ; A != 0 -> break
     next
         ; A=0
@@ -2445,7 +2445,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     if_lt_then
         inx
         from_loop
-            lda BX,x
+            lda z:BX,x
             lsr
             lsr
             lsr
@@ -2453,7 +2453,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
             ora # PETSCII_DIGIT_ZERO
             sta AX,y
             iny
-            lda BX,x
+            lda z:BX,x
             and # $0F
             ora # PETSCII_DIGIT_ZERO
             sta AX,y
@@ -2489,7 +2489,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;; summary: Pause on SHIFT
 .proc PAUSE_ON_SHIFT
     from_loop
-        lda ZPKERNAL_SFDX
+        lda z:ZPKERNAL_SFDX
             ; $CB Matrix code of key currently being pressed. Values: 
             ; $00-$3F: Keyboard matrix code
             ; $40: No key is currently pressed
@@ -2517,11 +2517,11 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   C=1
 ;;; changed: A+ X+ Y+ AX+
 .proc PUT_ERROR_X_NUMBER
-    stx AL
+    stx z:AL
 
     jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
-    ldx AL
+    ldx z:AL
     ldy TABLE_ERROR_MESSAGE_HI,x
     lda TABLE_ERROR_MESSAGE_LO,x
     tax
@@ -2633,9 +2633,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         ldx # TABLE_COMMAND_NAME_SIZE - 1
     loop
         lda TABLE_COMMAND_NAME_LO, x
-        sta BL
+        sta z:BL
         lda TABLE_COMMAND_NAME_HI, x
-        sta BH
+        sta z:BH
         jsr ZSTRING_AX_COMPARE_ZSTRING_BX               ; A+ X- Y+ Z+ BX+
         beq _end                                        ; Z=1 -> equal -> break
     next
