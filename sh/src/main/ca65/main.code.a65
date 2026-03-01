@@ -123,6 +123,11 @@ LOAD_COMMAND_NAME               := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 LOAD_COMMAND_NAME_LO            := LOAD_COMMAND_NAME + 0
 LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 
+; FOR_EACH_ARGC
+FOR_EACH_ARG_LAMBDA             := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 11
+FOR_EACH_ARG_LAMBDA_LO          := FOR_EACH_ARG_LAMBDA
+FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
+
 ;endregion
 
 ;region Main
@@ -290,6 +295,40 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   printer is '>>'. Redirection file names can be quoted too.
 ;;;   We only need to inc DL (and not DH as well) because we will not cross the page.
 .proc PROCESS_COMMAND_LINE
+    jsr PARSE_COMMAND_LINE
+    ; Have we got any arguments?
+    lda GNUX_ARGC_LO
+    if_ne_then
+        ; We have got arguments?
+        ; AX: ZSTRING := ARGV[0] = COMMAND
+        lda # 0
+        jsr GET_AX_ARGV_A                               ; A+ X- Y+ AX+
+        ldy # 0
+        lda [AX],y
+        ; Argument 0 not empty?
+        if_ne_then
+            try
+                ldx GNUX_WORK_DEVICE
+                jsr OPEN_DISK_COMMAND_CHANNEL
+                bcs _catch
+                jsr TRY_BUILT_IN_COMMAND
+                if_cs_then                              ; Not built-in command
+                    jsr LOAD_COMMAND_IF_NOT_ALREADY_LOADED
+                    if_cc_then
+                        jsr EXECUTE_COMMAND
+                    else_end
+                else_end
+            catch_finally
+                jsr CLOSE_DISK_COMMAND_CHANNEL
+            end
+        else_end
+    else_end
+
+    rts
+.endproc
+
+;;; summary: Parse command line
+.proc PARSE_COMMAND_LINE
     ; GNUX_ARGC := 0
     ldy # 0
     sty GNUX_ARGC_LO
@@ -392,34 +431,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         bne ITERATE_COMMAND_LINE::_loop                 ; bra
     end
 
-    ; Finished parsing input text
-    ; Have we got any arguments?
-    lda GNUX_ARGC_LO
-    if_ne_then
-        ; We have got arguments?
-        ; AX: ZSTRING := ARGV[0] = COMMAND
-        lda # 0
-        jsr GET_AX_ARGV_A                               ; A+ X- Y+ AX+
-        ldy # 0
-        lda [AX],y
-        ; Argument 0 not empty?
-        if_ne_then
-            try
-                jsr TRY_BUILT_IN_COMMAND
-                if_cs_then                              ; Not built-in command
-                    jsr LOAD_COMMAND_IF_NOT_ALREADY_LOADED
-                    if_cc_then
-                        jsr EXECUTE_COMMAND
-                    else_end
-                else_end
-            catch_finally_end
-        else_end
-    else_end
-
-    jsr RESET_FILE_IO
-
     rts
 .endproc
+
 
 ;;; summary: AX := ARGV[A]
 ;;; in:
@@ -914,8 +928,8 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     else_end
 
     ; Device present. (Attempt to) read (but not show) disk status.
-    ldx z:DL                                              ; X = DL = DEVICE
-    lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE
+    ldx z:DL                                            ; X = DL = DEVICE
+    lda # 0
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     ldx # ERROR_NUMBER_COMMAND_NOT_FOUND
@@ -940,7 +954,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     clc                                                 ; C0
     and # PROCESS_DISK_STATUS_OPEN                      ; A+ N+ Z+
     if_ne_then
-        jsr OPEN_DISK_COMMAND_STATUS_CHANNEL            ; A+ X+ Y+ C+
+        jsr OPEN_DISK_COMMAND_CHANNEL            ; A+ X+ Y+ C+
     else_end
 
     if_cc_then
@@ -968,7 +982,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     lda z:CL                                            ; A = FLAGS
     and # PROCESS_DISK_STATUS_CLOSE                     ; A+ N+ Z+
     if_ne_then
-        jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL           ; A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+        jsr CLOSE_DISK_COMMAND_CHANNEL           ; A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     else_end
 
     rts
@@ -981,7 +995,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y- C+
 ;;; notes: Basically never fails because there is no file name
-.proc OPEN_DISK_COMMAND_STATUS_CHANNEL
+.proc OPEN_DISK_COMMAND_CHANNEL
     lda # DISK_COMMAND_LA_SA
     tay
     jsr KERNAL_SETLFS                                   ; A=LA X=DA Y=SA | A- X- Y-
@@ -996,7 +1010,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;; in:
 ;;;   A: Device Address
 ;;; changed: A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
-.proc CLOSE_DISK_COMMAND_STATUS_CHANNEL
+.proc CLOSE_DISK_COMMAND_CHANNEL
     php
         lda # DISK_COMMAND_LA
         jsr KERNAL_CLOSE                                ; A+ X+ Y+ C+
@@ -1096,7 +1110,10 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 
 ;region Build-in commands
 
+;;; summary: Exit
 .proc CMD_EXIT
+    jsr RESET_FILE_IO
+
     ; Reset kernal indirects and vectors to system defaults
     jsr KERNAL_RESTOR                                   ; A+ X+ Y+
 
@@ -1183,10 +1200,6 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         rts
     else_end
 
-    ; Open
-    ldx GNUX_WORK_DEVICE
-    jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+ C+
-
     ; Set output
     ldx # DISK_COMMAND_LA
     jsr KERNAL_CHKOUT                                   ; A+ X+ Y- C+
@@ -1199,7 +1212,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     jsr PUT_ZSTRING_AX                                  ; BX+
 
     ldx GNUX_WORK_DEVICE
-    lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW | PROCESS_DISK_STATUS_ALWAYS
+    lda # PROCESS_DISK_STATUS_SHOW | PROCESS_DISK_STATUS_ALWAYS
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN |  A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     rts
@@ -1227,9 +1240,6 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         rts
     else_end
 
-    ldx GNUX_WORK_DEVICE
-    jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+
-
     ldx # DISK_COMMAND_LA
     jsr KERNAL_CHKOUT                                   ; A+ X+ Y- C+
     if_cs_then
@@ -1250,7 +1260,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     jsr OUT_PUT_ZSTRING_AX
 
     ldx GNUX_WORK_DEVICE
-    lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
+    lda # PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     rts
@@ -1289,9 +1299,6 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         rts
     else_end
 
-    ldx GNUX_WORK_DEVICE
-    jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+
-
     ldx # DISK_COMMAND_LA
     jsr KERNAL_CHKOUT                                   ; A+ X+ Y+ C+
     if_cs_then
@@ -1322,7 +1329,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     jsr OUT_PUT_ZSTRING_AX
 
     ldx GNUX_WORK_DEVICE
-    lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
+    lda # PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     rts
@@ -1331,11 +1338,23 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;;; summary: Print (cat) file
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+ DX+
 .proc CMD_CAT
+    ; Cat without arguments requires input redirection.
+    ; Cat with arguments cancels any input redirection.
     lda GNUX_ARGC_LO
-    cmp # 2
-    if_ne_then
-        ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
-        jsr PUT_ERROR_X_NUMBER
+    cmp # 1
+    if_eq_then
+        ; Cat without arguments
+        lda GNUX_IN_LA
+        if_eq_then
+            ; No input redirection
+            ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
+            jsr PUT_ERROR_X_NUMBER
+            rts
+        else_end
+
+        ; Input redirection is active
+        jsr STREAM_COPY_IN_TO_OUT
+
         rts
     else_end
 
@@ -1345,51 +1364,12 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
         jsr CLOSE                                       ; Does CLRCHN ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     else_end
 
-    ; AX := ARGV[1]
-    lda # 1
-    jsr GET_AX_ARGV_A                       ; A+ X- Y+ BX+
-    ; Is ARGV[A].LENGTH < FILE_NAME_MAX_LENGTH ?
-    jsr ZSTRING_AX_LENGTH
-    if
-        cpy # 0
-        beq _then
-        cpy # FILE_NAME_MAX_LENGTH + 1
-        bcc _end                                        ; lt
-    then
-        ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
-        jsr PUT_ERROR_X_NUMBER
-        rts
-    else_end
+    ; ARGC >= 2
+    ; SEQUENCE(1,ARGC).FOREACH((A) -> DO_PR_ARG_INDEX_A)
+    ldx # < CAT_LAMBDA
+    ldy # > CAT_LAMBDA
+    jsr FOR_EACH_ARG
 
-    ; Open
-    lda # REDIRECT_INPUT_LA
-    ldy # REDIRECT_INPUT_SA
-    ldx GNUX_WORK_DEVICE
-    jsr OPEN_IN_FILE_AX                                 ; A+ X+ Y+ C+
-    if_cs_then
-        ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
-        jsr PUT_ERROR_X_NUMBER
-        rts
-    else_end
-
-    ldx GNUX_WORK_DEVICE
-    lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
-    if_cs_then
-        rts
-    else_end
-
-    jsr STREAM_COPY_IN_TO_OUT
-
-    lda # REDIRECT_INPUT_LA
-    jsr CLOSE                                           ; Does CLRCHN ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
-
-    lda # REDIRECT_OUTPUT_LA
-    jsr CLOSE                                           ; Does CLRCHN ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
-
-    ldx GNUX_WORK_DEVICE
-    lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     rts
 .endproc
 
@@ -1413,6 +1393,58 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     lda # > GNUX_SYS_DEVICE
     sta z:DH
     jsr SHOW_OR_CHANGE_DEVICE
+
+    rts
+.endproc
+
+;endregion
+
+;region Implementation of CMD_CAT
+
+;;; summary: CMD_CAT FOR_EACH_ARG LAMBDA
+.proc CAT_LAMBDA
+    ; Is ARGV[A].LENGTH < FILE_NAME_MAX_LENGTH ?
+    jsr ZSTRING_AX_LENGTH
+    if
+        cpy # 0
+        beq _then
+        cpy # FILE_NAME_MAX_LENGTH + 1
+        bcc _end                                        ; lt
+    then
+        ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
+        jsr PUT_ERROR_X_NUMBER
+        clc                                             ; Continue for each
+        rts
+    else_end
+
+    try
+        ; Open
+        lda # REDIRECT_INPUT_LA
+        ldy # REDIRECT_INPUT_SA
+        ldx GNUX_WORK_DEVICE
+        jsr OPEN_IN_FILE_AX                                 ; A+ X+ Y+ C+
+        if_cs_then
+            ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
+            jsr PUT_ERROR_X_NUMBER                          ; C1
+            bcs _catch                                      ; throw
+        else_end
+
+        ldx GNUX_WORK_DEVICE
+        lda # PROCESS_DISK_STATUS_SHOW
+        jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+        bcs _catch                                          ; throw
+
+        jsr STREAM_COPY_IN_TO_OUT
+
+        ldx GNUX_WORK_DEVICE
+        lda # PROCESS_DISK_STATUS_SHOW
+        jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+    catch_finally
+        lda # REDIRECT_INPUT_LA
+        jsr CLOSE                                           ; Does CLRCHN ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+    end
+
+    clc                                                     ; Continue for each
 
     rts
 .endproc
@@ -1492,7 +1524,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     else_end
 
     ldx z:DL                                            ; A = DL = DEVICE
-    lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_SHOW
+    lda # PROCESS_DISK_STATUS_SHOW
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     if_cs_then
         rts
@@ -1642,7 +1674,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     else_end
 
     ; A = BL = NEW_DEVICE
-    jsr IS_DISK_DEVICE_PRESENT_A                        ; A+ X+ Y+ AX+
+    jsr IS_DISK_DEVICE_PRESENT                          ; A+ X+ Y+ AX+
     if_cc_then
         ; Device is present
         ; [DX] := NEW_DEVICE
@@ -1656,16 +1688,16 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 
 ;;; summary: Probe if disk device is present, showing error if not.
 ;;; in:
-;;;   A: DEVICE
+;;;   BL: DEVICE
 ;;; changed: A+ X+ Y+ AX+
-.proc IS_DISK_DEVICE_PRESENT_A
-    tax
-    jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; in X=DEVICE | A+ X+ Y+ C+
+.proc IS_DISK_DEVICE_PRESENT
+    jsr CLOSE_DISK_COMMAND_CHANNEL
+    ldx z:BL
+    jsr OPEN_DISK_COMMAND_CHANNEL                       ; in X=DEVICE | A+ X+ Y+ C+
     ; Open on non-existing device will not fail (because no bus I/O because file name), so no need to check C here.
     ; Use CHKOUT to check if device is present; do not use CHKIN because this will hang when the device is not present.
     ldx # DISK_COMMAND_LA
     jsr KERNAL_CHKOUT                                   ; A- X- Y- C+
-    jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL               ; A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     if_cs_then
         ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
         jsr PUT_ERROR_X_NUMBER                          ; C=1
@@ -2055,9 +2087,9 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 .endproc
 
 ;;; summary: Back to default file I/O
-;;; changed: A+ X+ Y+
+;;; changed: A+ X+ Y- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 .proc RESET_FILE_IO
-    jsr CLRCHN                                          ; A- X- Y- C0 DFLTN=0 DFLTO=3
+    jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     ; Close all open files
     from_loop
@@ -2643,6 +2675,49 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
     end
 
     rts
+.endproc
+
+;endregion
+
+;region Enumerate arguments
+
+;;; summary: Enumerate arguments, if any, starting from 1
+;;; in:
+;;;   X#Y: LAMBDA: Address of callback procedure
+;;; notes:
+;;;   Let LAMBDA return in C 
+;;; changed: A+ X- Y+ BX+
+.proc FOR_EACH_ARG
+    ; We use the stack for count each argument 1 .. ARGC-1, because lambda can use all registers.
+    stx FOR_EACH_ARG_LAMBDA_LO
+    sty FOR_EACH_ARG_LAMBDA_HI
+    from
+        lda # 1
+        pha
+    loop
+        pla
+        pha
+        ; AX := ARGV[A]
+        jsr GET_AX_ARGV_A                               ; A+ X- Y+ AX+
+        jsr FOR_EACH_ARG_CALL_LAMBDA                    ; A? X? Y? C+ AX? BX? CX? DX?
+        bcs _end                                        ; C=1 -> break
+    next
+        pla
+        tax
+        inx
+        cpx GNUX_ARGC_LO
+        beq _end
+        txa
+        pha
+        bne _loop                                       ; bra
+    end
+
+    rts
+.endproc
+
+;;; summary: 
+.proc FOR_EACH_ARG_CALL_LAMBDA
+    jmp [FOR_EACH_ARG_LAMBDA]
 .endproc
 
 ;endregion
