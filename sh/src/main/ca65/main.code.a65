@@ -119,6 +119,10 @@ NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 IN_STATUS                       := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 7
 OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 8
 
+LOAD_COMMAND_NAME               := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 9
+LOAD_COMMAND_NAME_LO            := LOAD_COMMAND_NAME + 0
+LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
+
 ;endregion
 
 ;region Main
@@ -395,7 +399,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         ; We have got arguments?
         ; AX: ZSTRING := ARGV[0] = COMMAND
         lda # 0
-        jsr GET_AX_ARGV_A                        ; A+ X- Y+ AX+
+        jsr GET_AX_ARGV_A                               ; A+ X- Y+ AX+
         ldy # 0
         lda [AX],y
         ; Argument 0 not empty?
@@ -552,7 +556,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Get (extract) file name from `COMMAND_LINE` from position `DX`.
 ;;; in:
-;;;   DX: Pointer in command line, initially to the '>'. Advanced to after
+;;;   BYTE[] DX=POINTER_COMMAND_LINE  Pointer in command line, initially to the '>'. Advanced to after file name.
 ;;; out:
 ;;;   AX: ZSTRING: DISK_COMMAND_TEXT: file name unquoted. May be empty.
 ;;; changed: A+ X- Y+ AX+ BX+ DL+
@@ -560,9 +564,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; check Y = 0
     ; [DX] != NUL and [DX] != PETSCII_SPACE and [DX] != PETSCII_NO_BREAK_SPACE and [DX] != PETSCII_PETSCII_LESS_THAN_SIGN and [DX] != PETSCII_PETSCII_GREATER_THAN_SIGN
 
-    ; ""
-    ldx # AX
-    jsr ZSTRING_ZP_X_INIT_DISK_COMMAND_TEXT             ; A+ X- Y- AX+
+    ; AX := ZSTRING.NEW(DISK_COMMAND_TEXT)
+    jsr ZSTRING_AX_NEW_DISK_COMMAND_TEXT                ; A+ X- Y- AX+
 
     ; Skip blanks
     jsr SKIP_BLANKS                                     ; A+ X- Y=0 DL+
@@ -573,7 +576,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    ; A = [DX]
+    ; A = [POINTER_COMMAND_LINE]
 
     ; check Y = 0
     ; check A != NUL and A != SPACE and A != NO_BREAK_SPACE
@@ -584,7 +587,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             inc DL
         else_end
 
-        ; BX := DX
+        ; ZSTRING BX=FILE_NAME := POINTER_COMMAND_LINE
         lda DL
         sta BL
         lda DH
@@ -606,7 +609,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         inc DL
     else_end
  
-    jsr ZSTRING_BX_COPY_TO_ZSTRING_AX                   ; A+ X- Y+
+    jsr ZSTRING_AX_COPY_FROM_ZSTRING_BX                 ; A+ X- Y+
 
     clc                                                 ; OK
 
@@ -619,13 +622,11 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: redirect input from file named `FILE_NAME_TEXT` extracted from `COMMAND_LINE` on work disk
 ;;; in:
-;;;   COMMAND_LINE: Input text
-;;;   X: Position in COMMAND_LINE
-;;;   Y: Offset in ARGV
+;;;   COMMAND_LINE: Command line text
+;;;   DX: pointer in COMMAND_LINE
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ AX+ BX+
-;;; notes: Need to preserve X & Y for PROCESS_COMMAND_LINE
 .proc REDIRECT_INPUT_FROM_FILE
     ; check Y = 0
     lda GNUX_IN_LA
@@ -634,7 +635,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    jsr GET_ZSTRING_AX_FILE_NAME_FROM_COMMAND_LINE      ; A+ X- Y+ AX+
+    jsr GET_ZSTRING_AX_FILE_NAME_FROM_COMMAND_LINE      ; A+ X- Y+ AX+ BX+ DX+
     if_cc_then
         lda # REDIRECT_INPUT_LA
         ldx GNUX_WORK_DEVICE
@@ -648,7 +649,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Redirect output to file named `FILE_NAME_TEXT` extracted from `COMMAND_LINE` on work disk
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+ DX+
 ;;; notes:
-;;;   We must preserve DX
+;;;   Do not use DX
 .proc REDIRECT_OUTPUT_TO_FILE
     ; check Y = 0
     lda GNUX_OUT_LA
@@ -657,20 +658,18 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    ; AX := FILE
-    jsr GET_ZSTRING_AX_FILE_NAME_FROM_COMMAND_LINE      ; A+ X- Y+ AX+ DX+
+    ; AX=FILE_NAME := ZSTRING.NEW(DISK_COMMAND_TEXT)
+    jsr GET_ZSTRING_AX_FILE_NAME_FROM_COMMAND_LINE      ; A+ X- Y+ AX+ BX+ DX+
     if_cc_then
         ; + ",s,w"
-        lda # < RESOURCE_ZSTRING_SEQ_WRITE
-        sta BL
-        lda # > RESOURCE_ZSTRING_SEQ_WRITE
-        sta BH
-        jsr ZSTRING_AX_APPEND_ZSTRING_BX                ; A+ X- Y+
+        ldx # < RESOURCE_ZSTRING_SEQ_WRITE
+        ldy # > RESOURCE_ZSTRING_SEQ_WRITE
+        jsr ZSTRING_AX_APPEND_ZSTRING_XY                ; A+ X- Y+ BX+ CX+
         ; Open
         lda # REDIRECT_OUTPUT_LA
         ldx GNUX_WORK_DEVICE
         ldy # REDIRECT_OUTPUT_FILE_SA
-        jsr OPEN_OUT_FILE_AX                            ; A+ X+ Y+ CX+
+        jsr OPEN_OUT_FILE_AX                            ; A+ X+ Y+ C+ BL+
     else_end
 
     rts
@@ -679,7 +678,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Redirect output to printer (device 4, secondary address 7 is upper and lower case charecters)
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ AX+
+;;; changed: A+ X+ Y+ C+ AX+
 .proc REDIRECT_OUTPUT_TO_PRINTER
     lda GNUX_OUT_LA
     if_ne_then
@@ -697,7 +696,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda # REDIRECT_OUTPUT_LA
     ldx # REDIRECT_OUTPUT_PRINTER_DA
     ldy # REDIRECT_OUTPUT_PRINTER_SA
-    jsr OPEN_OUT_FILE_AX                                ; A+ X+ Y+ C+
+    jsr OPEN_OUT_FILE_AX                                ; A+ X+ Y+ C+ BL+
 
     rts
 .endproc
@@ -802,9 +801,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   AX: Name of program to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ BX+
-;;; notes:
-;;;   Do not change AX
+;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_COMMAND_NAME+
 .proc LOAD_COMMAND_IF_NOT_ALREADY_LOADED
     ; Already loaded?
     lda # < LOADED_COMMAND_NAME
@@ -817,7 +814,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts
     else_end
 
-    jsr LOAD_COMMAND_FROM_WORK_OR_SYS_DISK
+    jsr LOAD_COMMAND_FROM_WORK_OR_SYS_DISK              ; A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_COMMAND_NAME+
 
     rts
 .endproc
@@ -827,17 +824,21 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   AX: ZSTRING: Name of program to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; notes:
-;;;   Do not change AX
+;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_COMMAND_NAME+
 .proc LOAD_COMMAND_FROM_WORK_OR_SYS_DISK
+    lda AL
+    sta LOAD_COMMAND_NAME_LO
+    lda AH
+    sta LOAD_COMMAND_NAME_HI
+
     ; Try work disk
     ldx GNUX_WORK_DEVICE
-    jsr LOAD_COMMAND
+    jsr LOAD_COMMAND ; AX+
     if_cs_then
         ; Load from work disk failed.
         ; Try system disk
         ldx GNUX_SYS_DEVICE
-        jsr LOAD_COMMAND
+        jsr LOAD_COMMAND                                ; A+ X+ Y+ C+ AX+ BX+ DL+
         if_cs_then
             ; Load from system disk failed too.
             ; X = ERROR_NUMBER_*
@@ -850,10 +851,12 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; Save name of loaded program.
     ; notes: We know program name is max 16 characters + 1 for NUL
     lda # < LOADED_COMMAND_NAME
-    sta BL
+    sta AL
     lda # > LOADED_COMMAND_NAME
-    sta BH
-    jsr ZSTRING_AX_COPY_TO_ZSTRING_BX                   ; A+ X- Y+
+    sta AH
+    ldx # < LOAD_COMMAND_NAME_LO
+    ldy # > LOAD_COMMAND_NAME_HI
+    jsr ZSTRING_AX_COPY_FROM_ZSTRING_XY                 ; A+ X- Y+ BX+
 
     clc                                                 ; OK
 
@@ -862,34 +865,37 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Load program
 ;;; in:
-;;;   X: UBYTE: DEVICE
-;;;   AX: ZSTRING: COMMAND
-;;; changed: A+ X+ Y+ BX+ DX+
-;;; notes:
-;;;   Do not change AX
+;;;   UBYTE   X=DEVICE           Device address
+;;;   ZSTRING LOAD_COMMAND_NAME  Name of the command to load
+;;; out:
+;;;   C: 0: OK , 1: FAIL
+;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+
 .proc LOAD_COMMAND
-    ; check AX.LENGTH <= FILE_NAME_MAX_LENGTH
+    ; require LOAD_COMMAND_NAME.LENGTH <= FILE_NAME_MAX_LENGTH
     stx DL                                              ; DL = X = DEVICE
-
-    ; BX := ""
-    ldx # BX
-    jsr ZSTRING_ZP_X_INIT_DISK_COMMAND_TEXT
-
-    ; + COMMAND
-    jsr ZSTRING_AX_COPY_TO_ZSTRING_BX
-
-    ; + ".sh"
-    jsr ZSTRING_BX_APPEND_DOT_SH                        ; A+ X+ Y+
-
-    ; Load
     lda # LOAD_LA
     ldy # LOAD_SA
-    ldx DL                                              ; X = DL = DEVICE
     jsr KERNAL_SETLFS
-    jsr ZSTRING_BX_LENGTH
+
+    ; AX := ZSTRING.NEW(DISK_COMMAND_TEXT).COPY_FROM(LOAD_COMMAND_NAME)
+    lda # < DISK_COMMAND_TEXT
+    sta AL
+    lda # < DISK_COMMAND_TEXT
+    sta AH
+    ldx LOAD_COMMAND_NAME_LO
+    ldy LOAD_COMMAND_NAME_HI
+    jsr ZSTRING_AX_COPY_FROM_ZSTRING_XY
+
+    ; + ".sh"
+    ldx # < RESOURCE_STRING_DOT_SH
+    ldy # > RESOURCE_STRING_DOT_SH
+    jsr ZSTRING_AX_APPEND_ZSTRING_XY                    ; A+ X- Y+ BX+ CX+
+
+    ; Load
+    jsr ZSTRING_AX_LENGTH
     tya
-    ldx BL
-    ldy BH
+    ldx AL
+    ldy AH
     jsr KERNAL_SETNAM
     ldx DL                                              ; X = DL = DEVICE
     lda # KERNAL_LOAD_LOAD
@@ -910,37 +916,10 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; Device present. (Attempt to) read (but not show) disk status.
     ldx DL                                              ; X = DL = DEVICE
     lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_CLOSE
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | DFLTN=0 DFLTO=3
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     ldx # ERROR_NUMBER_COMMAND_NOT_FOUND
     sec                                                 ; FAIL
-
-    rts
-.endproc
-
-;;; summary: Append ".sh" to ZSTRING BX
-;;; in:
-;;;   BX: ZSTRING: Target string
-;;; changed: A+ X+ Y+
-;;; notes:
-;;;   We did not have any more free registers in `LOAD_COMMAND` so we could
-;;;   not use a generic routine instead.
-.proc ZSTRING_BX_APPEND_DOT_SH
-    jsr ZSTRING_BX_LENGTH
-    from
-        ldx # 0
-    loop
-        lda RESOURCE_STRING_DOT_SH,x
-        beq _end                                        ; break
-        sta [BX],y
-        iny
-    next
-        inx
-        bne _loop                                       ; bra
-    end
-
-    lda # PETSCII_NUL
-    sta [BX],y
 
     rts
 .endproc
@@ -955,7 +934,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: DA: Device Address
 ;;; out:
 ;;;   C: 0=OK 1=ERROR
-;;; changed: A+ X+ Y+ C+ BX+ CL+
+;;; changed: A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 .proc PROCESS_DISK_STATUS
     sta CL                                              ; CL = FLAGS
     clc                                                 ; C0
@@ -965,7 +944,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     else_end
 
     if_cc_then
-        jsr READ_DISK_STATUS                            ; A+ X+ Y+ C+
+        jsr READ_DISK_STATUS                            ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     else_end
 
     if_cc_then
@@ -989,7 +968,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     lda CL                                              ; A = FLAGS
     and # PROCESS_DISK_STATUS_CLOSE                     ; A+ N+ Z+
     if_ne_then
-        jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL           ; A+ X+ Y+ P-
+        jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL           ; A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     else_end
 
     rts
@@ -1014,12 +993,14 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 .endproc
 
 ;;; summary: Close disk command and status channel
-;;; changed: A+ X+ Y+ P-
+;;; in:
+;;;   A: Device Address
+;;; changed: A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 .proc CLOSE_DISK_COMMAND_STATUS_CHANNEL
     php
         lda # DISK_COMMAND_LA
         jsr KERNAL_CLOSE                                ; A+ X+ Y+ C+
-        jsr CLRCHN                                      ; A- X- Y- C0 DFLTN=0 DFLTO=3
+        jsr CLRCHN                                      ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     plp
 
     rts
@@ -1031,19 +1012,21 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; out:
 ;;;   C: 0=OK 1=ERROR
 ;;;   DISK_STATUS_TEXT: Disk status that has been read
-;;; changed: A+ X+ Y+ C+
+;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 .proc READ_DISK_STATUS
     ; DISK_STATUS_TEXT = ""
     lda # PETSCII_NUL
     sta DISK_STATUS_TEXT
 
-    jsr CLRCHN                                          ; Just to be sure
+    jsr CLRCHN                                          ; Just to be sure ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     ; Set input
     ldx # DISK_COMMAND_LA
     jsr KERNAL_CHKIN                                    ; A+ X+ Y- C+
     if_cs_then
         ; Cannot read disk status
+        jsr CLRCHN                                      ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+        sec
         rts
     else_end
 
@@ -1068,7 +1051,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Last chrin causes EOI and C=1
 
-    jsr CLRCHN                                          ; A- X- Y- C0 DFLTN=0 DFLTO=3
+    jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     rts
 .endproc
@@ -1206,7 +1189,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ; Set output
     ldx # DISK_COMMAND_LA
-    jsr CHKOUT                                          ; A- X- Y- C+
+    jsr KERNAL_CHKOUT                                   ; A+ X+ Y- C+
     if_cs_then
         ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
         jsr PUT_ERROR_X_NUMBER
@@ -1217,7 +1200,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW | PROCESS_DISK_STATUS_ALWAYS
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | DFLTN=0 DFLTO=3
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN |  A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     rts
 .endproc
@@ -1248,7 +1231,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     jsr OPEN_DISK_COMMAND_STATUS_CHANNEL                ; A+ X+ Y+
 
     ldx # DISK_COMMAND_LA
-    jsr CHKOUT                                          ; A- X- Y- C+
+    jsr KERNAL_CHKOUT                                   ; A+ X+ Y- C+
     if_cs_then
         ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
         jsr PUT_ERROR_X_NUMBER
@@ -1268,7 +1251,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | DFLTN=0 DFLTO=3
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     rts
 .endproc
@@ -1340,7 +1323,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | DFLTN=0 DFLTO=3
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     rts
 .endproc
@@ -1359,7 +1342,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; Like Gnu cat, close IN redirection if we have got a file
     lda GNUX_IN_LA
     if_ne_then
-        jsr CLOSE                                       ; Does CLRCHN too
+        jsr CLOSE                                       ; Does CLRCHN ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     else_end
 
     ; AX := ARGV[1]
@@ -1391,7 +1374,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | DFLTN=0 DFLTO=3
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     if_cs_then
         rts
     else_end
@@ -1399,14 +1382,14 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     jsr STREAM_COPY_IN_TO_OUT
 
     lda # REDIRECT_INPUT_LA
-    jsr CLOSE                                           ; A+ X+ Y+ C0
+    jsr CLOSE                                           ; Does CLRCHN ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     lda # REDIRECT_OUTPUT_LA
-    jsr CLOSE                                           ; A+ X+ Y+ C0
+    jsr CLOSE                                           ; Does CLRCHN ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
     ldx GNUX_WORK_DEVICE
     lda # PROCESS_DISK_STATUS_CLOSE | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | DFLTN=0 DFLTO=3
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     rts
 .endproc
 
@@ -1455,18 +1438,16 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     stx DL                                              ; DL = X = DEVICE
 
+    ; In case ARGC == 1
+    ; AX := "$"
+    lda # < RESOURCE_ZSTRING_DIR_NAME
+    sta AL
+    lda # > RESOURCE_ZSTRING_DIR_NAME
+    sta AH
+
     lda GNUX_ARGC_LO
-    cmp # 1
+    cmp # 2
     if_eq_then
-        ; ARGC == 1
-        ; BX := "$"
-        lda # < RESOURCE_ZSTRING_DIR_NAME
-        sta AL
-        lda # > RESOURCE_ZSTRING_DIR_NAME
-        sta AH
-        ; check Z = 0
-        bne _end                                        ; bra
-    else
         ; ARGC == 2
         ; AX := ARGV[1]
         lda # 1
@@ -1485,9 +1466,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         lda AH
         sta BH
 
-        ; AX := ""
-        ldx # AX
-        jsr ZSTRING_ZP_X_INIT_DISK_COMMAND_TEXT         ; A+ X- Y- AX+
+        ; AX := ZSTRING.NEW(DISK_COMMAND_TEXT)
+        jsr ZSTRING_AX_NEW_DISK_COMMAND_TEXT            ; A+ X- Y- AX+
 
         ; + "$"
         lda # PETSCII_DOLLAR
@@ -1498,8 +1478,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr ZSTRING_AX_APPEND_CHAR_A                    ; A+ X- Y+
 
         ; + ARGV[1]
-        jsr ZSTRING_AX_APPEND_ZSTRING_BX                ; A+ X- Y+
-    end
+        jsr ZSTRING_AX_APPEND_ZSTRING_BX                ; A+ X- Y+ CX+
+    else_end
 
     ldx DL                                              ; X = DL = DEVICE
     lda # FILE_LA
@@ -1513,7 +1493,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
     ldx DL                                              ; A = DL = DEVICE
     lda # PROCESS_DISK_STATUS_OPEN | PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | DFLTN=0 DFLTO=3
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     if_cs_then
         rts
     else_end
@@ -1572,7 +1552,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr OUT_PUT_BYTE
     catch_finally
         lda # FILE_LA
-        jsr CLOSE                                       ; Does CLRCHN | DFLTN=0 DFLTO=3
+        jsr CLOSE                                       ; Does CLRCHN ; A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     end
 
     rts
@@ -1615,9 +1595,11 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; changed: A+ X+ Y+ AX+ BX+
 .proc SHOW_DEVICE
     jsr OUT_CHKOUT                                      ; A- X- Y- C+
-    ldx # < RESOURCE_ZSTRING_DEVICE
-    ldy # > RESOURCE_ZSTRING_DEVICE
-    jsr OUT_PUT_ZSTRING_XY                              ; AX+
+    lda # < RESOURCE_ZSTRING_DEVICE
+    sta AL
+    lda # > RESOURCE_ZSTRING_DEVICE
+    sta AH
+    jsr OUT_PUT_ZSTRING_AX
 
     ; AX := [DX]                                        ; DEVICE
     ldy # 0
@@ -1646,7 +1628,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; A: UBYTE := ARGV[1].DECIMAL_TO_UBYTE              ; DEVICE
     lda # 1
     jsr GET_AX_ARGV_A
-    jsr ZSTRING_AX_DECIMAL_TO_UBYTE_A           ; A+ X- Y+ AX+ BL+
+    jsr ZSTRING_AX_DECIMAL_TO_UBYTE_A                   ; out A = BL = NEW_DEVICE | A+ X- Y+ AX+ BL+
     if
         cmp # DEVICE_DISK_MIN
         bcc _then
@@ -1659,12 +1641,12 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         rts                                             ; FAIL
     else_end
 
-    ; A = DEVICE
-    pha
-        jsr IS_DISK_DEVICE_PRESENT_A                    ; A+ X+ Y+ AX+
-    pla
+    ; A = BL = NEW_DEVICE
+    jsr IS_DISK_DEVICE_PRESENT_A                        ; A+ X+ Y+ AX+
     if_cc_then
         ; Device is present
+        ; [DX] := NEW_DEVICE
+        lda BL
         ldy # 0
         sta [DX],y
     else_end
@@ -1683,9 +1665,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     ; Use CHKOUT to check if device is present; do not use CHKIN because this will hang when the device is not present.
     ldx # DISK_COMMAND_LA
     jsr KERNAL_CHKOUT                                   ; A- X- Y- C+
-    php
-        jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL           ; in A+ X+ Y+ C+
-    plp
+    jsr CLOSE_DISK_COMMAND_STATUS_CHANNEL               ; A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     if_cs_then
         ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
         jsr PUT_ERROR_X_NUMBER                          ; C=1
@@ -1701,15 +1681,13 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;region ZSTRING
 
-;;; summary: Make ZP,X # ZP+1,X an empty ZSTRING on DISK_COMMAND_TEXT
-;;; in:
-;;   X: Offset in zero page
+;;; summary: Make AX a new empty string on DISK_COMMAND_TEXT
 ;;; changed: A+ X- Y- AX+
-.proc ZSTRING_ZP_X_INIT_DISK_COMMAND_TEXT
+.proc ZSTRING_AX_NEW_DISK_COMMAND_TEXT
     lda # < DISK_COMMAND_TEXT
-    sta 0 , x
+    sta AL
     lda # > DISK_COMMAND_TEXT
-    sta 1 , x
+    sta AH
     lda # PETSCII_NUL
     sta DISK_COMMAND_TEXT
 
@@ -1737,32 +1715,13 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; summary: String length
-;;; in:
-;;;   BX: String, nul-terminated
-;;; out:
-;;;   Y: Length of string
-;;; changed: A+ X- Y+
-.proc ZSTRING_BX_LENGTH
-    from
-        ldy # 0
-    loop
-        lda [BX],y
-        beq _end                                        ; break
-    next
-        iny
-        bne _loop                                       ; bra
-    end
-
-    rts
-.endproc
-
 ;;; summary: Compare strings
 ;;; in:
 ;;;   AX: ZSTRING: Left
 ;;;   BX: ZSTRING: Right
 ;;; out:
 ;;;   Z: Is equal? 0 = no 1=yes
+;;; changed: A+ X- Y+ Z+
 .proc ZSTRING_AX_COMPARE_ZSTRING_BX
     from
         ldy # 0
@@ -1786,9 +1745,9 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; in:
 ;;;   A: BYTE: Source character
 ;;;   AX: ZSTRING: Target string
-;;; changed: A+ X- Y+
+;;; changed: A+ X+ Y+
 .proc ZSTRING_AX_APPEND_CHAR_A
-    pha
+    tax
         from
             ldy # 0
         loop
@@ -1798,7 +1757,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             iny
             bne _loop                                   ; bra
         end
-    pla
+    txa
     sta [AX],y
     iny
     lda # PETSCII_NUL
@@ -1809,38 +1768,58 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Append string
 ;;; in:
-;;;   AX: ZSTRING: Target
-;;;   BX: ZSTRING: Source
-;;; changed: A+ X- Y+
-.proc ZSTRING_AX_APPEND_ZSTRING_BX
-    lda CL
-    pha
-        lda CH
-        pha
-            from
-                jsr ZSTRING_AX_LENGTH                   ; A+ X- Y+
-                sty CH
-                ldy # 0
-                sty CL
-            loop
-                ldy CL
-                lda [BX], y
-                beq _end                                ; break
-                ldy CH
-                sta [AX],y
-            next
-                inc CL
-                inc CH
-                bne _loop                               ; bra
-            end
+;;;   ZSTRING X#Y  SOURCE
+;;;   ZSTRING AX   TARGET
+;;; changed: A+ X- Y+ BX+ CX+
+.proc ZSTRING_AX_APPEND_ZSTRING_XY
+    stx BL
+    sty BH
+    jsr ZSTRING_AX_APPEND_ZSTRING_BX                    ; A+ X- Y+ CX+
 
-            ; A = PETSCII_NUL
-            ldy CH
-            sta [AX],y
-        pla
-        sta CH
-    pla
-    sta CL
+    rts
+.endproc
+
+;;; summary: Append string
+;;; in:
+;;;   AX: ZSTRING: TARGET
+;;;   BX: ZSTRING: SOURCE
+;;; changed: A+ X- Y+ CX+
+.proc ZSTRING_AX_APPEND_ZSTRING_BX
+    from
+        jsr ZSTRING_AX_LENGTH                           ; A+ X- Y+
+        sty CH                                          ; CH = I_TARGET
+        ldy # 0
+        sty CL                                          ; CL = I_SOURCE
+    loop
+        ; TARGET[I_TARGET] := SOURCE[I_SOURCE]
+        ldy CL
+        lda [BX], y                                     ; A = SOURCE[I_SOURCE]
+        beq _end                                        ; EOS -> break
+        ldy CH
+        sta [AX],y                                      ; TARGET[I_TARGET] = A
+    next
+        inc CL                                          ; I_SOURCE++
+        inc CH                                          ; I_TARGET++
+        bne _loop                                       ; bra
+    end
+
+    ; A = PETSCII_NUL
+    ; TARGET[I_TARGET] := PETSCII_NUL
+    ldy CH
+    sta [AX],y
+
+    rts
+.endproc
+
+;;; summary: Copy string
+;;; in:
+;;;   AX: TARGET
+;;;   BX: SOURCE
+;;; changed: A+ X- Y+ BX+
+.proc ZSTRING_AX_COPY_FROM_ZSTRING_XY
+    stx BL
+    sty BH
+    jsr ZSTRING_AX_COPY_FROM_ZSTRING_BX                 ; A+ X- Y+
 
     rts
 .endproc
@@ -1850,33 +1829,13 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   AX: TARGET
 ;;;   BX: SOURCE
 ;;; changed: A+ X- Y+
-.proc ZSTRING_BX_COPY_TO_ZSTRING_AX
+.proc ZSTRING_AX_COPY_FROM_ZSTRING_BX
     from
         ldy # 0
     loop
         lda [BX], y
         sta [AX],y
-        beq _end                                        ; break
-    next
-        iny
-        bne _loop                                       ; bra
-    end
-
-    rts
-.endproc
-
-;;; summary: Copy string
-;;; in:
-;;;   AX: SOURCE
-;;;   BX: TARGET
-;;; changed: A+ X- Y+
-.proc ZSTRING_AX_COPY_TO_ZSTRING_BX
-    from
-        ldy # 0
-    loop
-        lda [AX], y
-        sta [BX],y
-        beq _end                                        ; break
+        beq _end                                        ; EOS -> break
     next
         iny
         bne _loop                                       ; bra
@@ -1889,62 +1848,15 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;region Low-level I/O
 
-;;; summary: Clear STATUS
-;;; changed: A+ X- Y- C- N0 V- Z1 STATUS=0
-.proc CLEAR_STATUS
+;;; summary: Set IN/OUT back to keyboard and screen. Clear STATUS.
+;;; changed: A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+.proc CLRCHN
+    jsr KERNAL_CLRCHN                                   ; A+ X+ Y- C+ DFLTN=0 DFLTO=3
     lda # 0
     sta ZPKERNAL_STATUS
-
-    rts
-.endproc
-
-;;; summary: Set IN/OUT back to keyboard and screen.
-;;; changed: A- X- Y- C0 DFLTN=0 DFLTO=3 STATUS=0
-.proc CLRCHN
-    pha                                                 ; S = A' + S'
-        txa                                             ; A = X'
-        pha                                             ; S = X' + A' + S'
-            jsr KERNAL_CLRCHN                           ; A+ X+ Y- C+ DFLTN=0 DFLTO=3
-            lda # 0
-            sta ZPKERNAL_STATUS
-        pla                                             ; A = X' ; S = A' + S'
-        tax                                             ; X = X'
-    pla                                                 ; A = A' ; S = S'
+    sta IN_STATUS
+    sta OUT_STATUS
     clc                                                 ; C = 0
-
-    rts
-.endproc
-
-;;; summary: Select input channel
-;;; out:
-;;;   C: 0: OK , 1: ERROR
-;;; changed: A- X- Y- C+
-.proc CHKIN
-    pha
-        txa
-        pha
-            jsr KERNAL_CHKIN                            ; A+ X+ Y- C+
-        pla
-        tax
-    pla
-
-    rts
-.endproc
-
-;;; summary: Select output channel
-;;; out:
-;;;   C: 0: OK , 1: ERROR
-;;; changed: A- X- Y- C+
-.proc CHKOUT
-    clc
-    pha
-        txa
-        pha
-            jsr KERNAL_CHKOUT                           ; A+ X+ Y- C+
-        pla
-        tax
-    pla
-
 
     rts
 .endproc
@@ -1989,7 +1901,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   A: Logical file Address (LA)
 ;;;   X: Device Address (DA)
 ;;;   Y: Secondary Address (SA)
-;;; changed: A+ X+ Y+
+;;; changed: A+ X+ Y+ C+
 ;;; notes:
 ;;;   Open basically never fails if there is no file name, only the CHKIN/CHKOUT after it will fail if the device is not present.
 .proc OPEN_FILE_AX
@@ -2004,26 +1916,12 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
     rts
 .endproc
 
-;;; summary: Write string to output channel
-;;; in:
-;;;   X#Y: ZSTRING: String to write
-;;; out:
-;;;   C: Error? 0: FALSE , 1: TRUE
-;;; changed: A+ X- Y+ C+ N+ V+ Z+ BX+
-.proc PUT_ZSTRING_XY
-    stx BL
-    sty BH
-    jsr PUT_ZSTRING_BX
-
-    rts
-.endproc
-
 ;;; summary: Write string to output channel with RETURN
 ;;; in:
 ;;;   X#Y: ZSTRING: String to write
 ;;; out:
 ;;;   C: Error? 0: FALSE , 1: TRUE
-;;; changed: A+ X- Y+ C+ N+ V+ Z+ BX+
+;;; changed: A+ X- Y+ C+ N+ V+ Z+ AX+
 .proc PUT_LINE_ZSTRING_XY
     jsr PUT_ZSTRING_XY
     lda # PETSCII_RETURN
@@ -2034,24 +1932,14 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
 ;;; summary: Write string to output channel
 ;;; in:
-;;;   BX: ZSTRING: String to write
+;;;   X#Y: ZSTRING: String to write
 ;;; out:
 ;;;   C: Error? 0: FALSE , 1: TRUE
-;;; changed: A+ X- Y+ C+ N+ V+ Z+
-.proc PUT_ZSTRING_BX
-    try
-        from
-            ldy # 0
-        loop
-            lda [BX],y                                  ; A+ N+ Z+
-            beq _end                                    ; NUL -> break
-            jsr PUT_BYTE                                ; A+ X- Y- C+ N+ V+ Z+
-            bcs _catch
-        next
-            iny
-            bne _loop                                   ; bra
-        end
-    catch_finally_end
+;;; changed: A+ X- Y+ C+ N+ V+ Z+ AX+
+.proc PUT_ZSTRING_XY
+    stx AL
+    sty AH
+    jsr PUT_ZSTRING_AX
 
     rts
 .endproc
@@ -2063,11 +1951,19 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   C: Error? 0: FALSE , 1: TRUE
 ;;; changed: A+ X- Y+ C+ N+ V+ Z+
 .proc PUT_ZSTRING_AX
-    lda AL
-    sta BL
-    lda AH
-    sta BH
-    jsr PUT_ZSTRING_BX
+    try
+        from
+            ldy # 0
+        loop
+            lda [AX],y                                  ; A+ N+ Z+
+            beq _end                                    ; EOS -> break
+            jsr PUT_BYTE                                ; A+ X- Y- C+ N+ V+ Z+
+            bcs _catch
+        next
+            iny
+            bne _loop                                   ; bra
+        end
+    catch_finally_end
 
     rts
 .endproc
@@ -2084,19 +1980,19 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   Y: Secondary Address (SA)
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+
+;;; changed: A+ X+ Y+ C+ BL+
 .proc OPEN_IN_FILE_AX
-    pha
-        lda GNUX_IN_LA
-        if_ne_then
-            ; Already open
-            sec
-        else_end
-    pla
-    pha
-        jsr OPEN_FILE_AX                            ; A+ X+ Y+
-    pla
+    sta BL                                              ; BL = A = LA
+    lda GNUX_IN_LA
+    if_ne_then
+        ; Already open
+        sec
+    else_end
+
+    lda BL                                              ; A = BL = LA
+    jsr OPEN_FILE_AX                                    ; A+ X+ Y+
     if_cc_then
+        lda BL                                          ; A = BL = LA
         sta GNUX_IN_LA
     else_end
 
@@ -2111,19 +2007,19 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   Y: Secondary Address (SA)
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3
+;;; changed: A+ X+ Y+ C+ BL+
 .proc OPEN_OUT_FILE_AX
-    pha
-        lda GNUX_OUT_LA
-        if_ne_then
-            ; Already open
-            sec
-        else_end
-    pla
-    pha
-        jsr OPEN_FILE_AX                                ; A+ X+ Y+ C+
-    pla
+    sta BL                                              ; BL = A = LA
+    lda GNUX_OUT_LA
+    if_ne_then
+        ; Already open
+        sec
+    else_end
+
+    lda BL                                              ; A = BL = LA
+    jsr OPEN_FILE_AX                                    ; A+ X+ Y+ C+
     if_cc_then
+        lda BL                                          ; A = BL = LA
         sta GNUX_OUT_LA
     else_end
 
@@ -2135,21 +2031,22 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   A: Logical file Address (LA)
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3
+;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 .proc CLOSE
+    ldx # 0
     cmp GNUX_IN_LA
     if_eq_then
-        ldx # 0
         stx GNUX_IN_LA
     else_end
 
     cmp GNUX_OUT_LA
     if_eq_then
-        ldx # 0
         stx GNUX_OUT_LA
     else_end
 
-    jsr CLRCHN                                          ; A- X- Y- C0 DFLTN=0 DFLTO=3
+    tay
+        jsr CLRCHN                                      ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+    tya
 
     jsr KERNAL_CLOSE                                    ; in A=LA | A+ X+ Y+ C+
     ; May fail on write buffered character
@@ -2185,21 +2082,15 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Select IN as input channel
 ;;; out:
 ;;;   C: 0: OK , 1: ERROR
-;;; changed: A- X- Y- C+
+;;; changed: A+ X+ Y- C+ STATUS=0
 .proc IN_CHKIN
     clc
-    pha
-        txa
-        pha
-            ldx # 0
-            stx ZPKERNAL_STATUS
-            ldx GNUX_IN_LA
-            if_ne_then
-                jsr KERNAL_CHKIN                        ; A+ X+ Y- C+
-            else_end
-        pla
-        tax
-    pla
+    ldx # 0
+    stx ZPKERNAL_STATUS
+    ldx GNUX_IN_LA
+    if_ne_then
+        jsr KERNAL_CHKIN                                ; A+ X+ Y- C+
+    else_end
 
     rts
 .endproc
@@ -2207,19 +2098,15 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; summary: Select OUT as output channel, with redirection.
 ;;; out:
 ;;;   C: 0: OK , 1: ERROR
-;;; changed: A- X- Y- C+
+;;; changed: A- X+ Y- C+
 .proc OUT_CHKOUT
     pha
-        txa
-        pha
-            ldx # 0
-            stx ZPKERNAL_STATUS
-            ldx GNUX_OUT_LA
-            if_ne_then
-                jsr KERNAL_CHKOUT                       ; A+ X+ Y- C+
-            else_end
-        pla
-        tax
+        ldx # 0
+        stx ZPKERNAL_STATUS
+        ldx GNUX_OUT_LA
+        if_ne_then
+            jsr KERNAL_CHKOUT                           ; A+ X+ Y- C+
+        else_end
     pla
 
     rts
@@ -2228,27 +2115,6 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;endregion
 
 ;region IN
-
-;;; summary: Clear IN status
-;;; changed: A- X- Y- C- N+ V- Z- IN_STATUS=0
-.proc IN_CLEAR_STATUS
-    pha
-        lda # 0
-        sta IN_STATUS
-    pla
-
-    rts
-.endproc
-
-;;; summary: Is IN past end of input (EOI)?
-;;; out:
-;;;   V: 0: FALSE , 1: TRUE
-;;; changed: A- X- Y- C- N+ V+ Z+
-.proc IN_IS_EOI
-    bit IN_STATUS
-
-    rts
-.endproc
 
 ;;; summary: Has a timeout occured on IN?
 ;;; out:
@@ -2291,17 +2157,6 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;endregion
 
 ;region OUT
-
-;;; summary: Clear OUT status
-;;; changed: A- X- Y- C- N+ V- Z- OUT_STATUS=0
-.proc OUT_CLEAR_STATUS
-    pha
-        lda # 0
-        sta OUT_STATUS
-    pla
-
-    rts
-.endproc
 
 ;;; summary: Has a timeout occured on `OUT`?
 ;;; out:
@@ -2347,34 +2202,19 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; changed: A+ X- Y+ C+ N+ V+ Z+ OUT_STATUS+
 .proc OUT_PUT_ZSTRING_AX
     try
-        clc                                                 ; If input string is empty, then OUT_PUT_BYTE is never called and C is not set.
+        clc                                             ; If input string is empty, then OUT_PUT_BYTE is never called and C is not set.
         from
             ldy # 0
         loop
-            lda [AX],y                                      ; A+ N+ Z+
-            beq _end                                        ; NUL -> break
-            jsr OUT_PUT_BYTE                                ; A+ X- Y- C+ N+ V+ Z+ OUT_STATUS+
-            bcs _catch                                      ; Error -> throw
+            lda [AX],y                                  ; A+ N+ Z+
+            beq _end                                    ; NUL -> break
+            jsr OUT_PUT_BYTE                            ; A+ X- Y- C+ N+ V+ Z+ OUT_STATUS+
+            bcs _catch                                  ; Error -> throw
         next
             iny
-            bne _loop                                       ; bra
+            bne _loop                                   ; bra
         end
     catch_finally_end
-
-    rts
-.endproc
-
-;;; summary: Write string to output channel (OUT)
-;;; in:
-;;;   X#Y: ZSTRING: String to write
-;;; out:
-;;;   C: 0=OK 1=FAIL
-;;; changed:
-;;;   A- X- Y+ C+ N+ V+ Z+ AX+ OUT_STATUS+
-.proc OUT_PUT_ZSTRING_XY
-    stx AL
-    sty AH
-    jsr OUT_PUT_ZSTRING_AX                              ; A+ X- Y+ C+ N+ V+ Z+ OUT_STATUS+
 
     rts
 .endproc
@@ -2389,17 +2229,17 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   Do not change DX
 .proc OUT_PUT_ZSTRING_AX_BX_CX
     try
-        clc                                                 ; If input string is empty, then OUT_PUT_BYTE is never called and C is not set.
+        clc                                             ; If input string is empty, then OUT_PUT_BYTE is never called and C is not set.
         from
             ldx # 0
         loop
             lda AX , x
-            beq _end                                        ; NUL -> break
-            jsr OUT_PUT_BYTE                                ; A+ X- Y- C+ N+ V+ Z+ OUT_STATUS+
-            bcs _catch                                      ; error -> throw
+            beq _end                                    ; NUL -> break
+            jsr OUT_PUT_BYTE                            ; A+ X- Y- C+ N+ V+ Z+ OUT_STATUS+
+            bcs _catch                                  ; error -> throw
         next
             inx
-            bne _loop                                       ; bra
+            bne _loop                                   ; bra
         end
     catch_finally_end
 
@@ -2411,13 +2251,11 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;region IN/OUT
 
 ;;; summary: Clear OUT status
-;;; changed: A- X- Y- C- N+ V- Z- OUT_STATUS=0
+;;; changed: A+ X- Y- C- N+ V- Z+ IN_STATUS=0 OUT_STATUS=0
 .proc IN_OUT_CLEAR_STATUS
-    pha
-        lda # 0
-        sta IN_STATUS
-        sta OUT_STATUS
-    pla
+    lda # 0
+    sta IN_STATUS
+    sta OUT_STATUS
 
     rts
 .endproc
@@ -2431,7 +2269,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   Basically, an empty file is not possible with CBM DOS, there are always at least 2 bytes.
 ;;;   We check for errors IN_CHKIN and OUT_CHKOUT only once for speed.
 .proc STREAM_COPY_IN_TO_OUT
-    jsr IN_OUT_CLEAR_STATUS
+    jsr IN_OUT_CLEAR_STATUS                             ; A+
     try
         jsr CLRCHN                                      ; A- X- Y- C0 N+ V+ Z+
         jsr IN_CHKIN                                    ; A- X- Y- C+
@@ -2439,7 +2277,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         jsr OUT_CHKOUT                                  ; A- X- Y- C+
         bcs _catch                                      ; error -> throw
         from_loop COPY
-            jsr IN_IS_EOI                               ; V+
+            bit IN_STATUS                               ; V+
             bvs COPY::_end                              ; EOI -> break
             jsr IN_CHKIN                                ; A- X- Y- C+
             jsr IN_GET_BYTE                             ; A+ X+ Y- C0 N+ V+ Z+ IN_STATUS+
@@ -2478,7 +2316,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; in:
 ;;;   AX: ZSTRING: Decimal number string
 ;;; out:
-;;;   A = BL: UBYTE: Binary representation of input
+;;;   A : UBYTE: Binary representation of input
+;;;   BL: = A
 ;;; changed:
 ;;;   A+ X- Y+ BL+
 ;;; notes:
@@ -2527,10 +2366,10 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;; in:
 ;;;  AX: WORD: VALUE
 ;;; out:
-;;;   BL,BH,CX: ZSTRING decimal representation of VALUE
+;;;   AX,BX,CX: ZSTRING: decimal representation of VALUE
 ;;; changed: A+ X+ Y+ AX+ BX+ CX+
 ;;; notes:
-;;;   Disables interrupts because it uses Decimal mode.
+;;;   Disables interrupts because it uses Decimal mode and Kernal interrupt & nmi routines use ADC & SBC.
 ;;;   Result has no leading zeros.
 ;;;   It uses a simple fixed loop that shifts the bits out of the binary value
 ;;;   one at a time and adds it to an intermediate result that is being doubled
@@ -2539,6 +2378,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   v.s. up to 2000 cycles or more.
 ;;;   Source value is destroyed.
 ;;;   Reference: book "6502 Instruction Set Guide" written by  Andrew John Jacobs and edited by Dion Olsthoorn, October 2021, chapter "Coding Algorithms", section "Decimal Arithmetic", pp. 27.
+;;;   Do not use DX.
 .proc AX_UWORD_TO_DECIMAL_AX_BX_CX
     ; Zero out result
     ldy # 0
@@ -2551,8 +2391,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             from_loop
                 asl AL
                 rol AH
-                lda CL
-                adc CL
+                lda < CL
+                adc z:CL
                 sta CL
                 lda BH
                 adc BH
@@ -2566,6 +2406,13 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             end
         cld
     cli
+
+    ; AX = 0
+
+    ; BL,BH,CL is BCD representation of VALUE, hi nybble of BL is %0000
+    ; |  BL   |   BH  |   CL  |
+    ; |hn |ln |hn |ln |hn |ln |
+    ; | 0 |0-9|0-9|0-9|0-9|0-9|
 
     from_loop
         lda BX,x
@@ -2668,16 +2515,17 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 ;;;   X: Error number
 ;;; out:
 ;;;   C=1
-;;; changed: A+ X+ Y+ BX+
+;;; changed: A+ X+ Y+ AX+
 .proc PUT_ERROR_X_NUMBER
+    stx AL
+
+    jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+
+    ldx AL
     ldy TABLE_ERROR_MESSAGE_HI,x
     lda TABLE_ERROR_MESSAGE_LO,x
     tax
-
-    ; IN = KEYBOARD , OUT = SCREEN
-    jsr CLRCHN                                          ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0
-
-    jsr PUT_LINE_ZSTRING_XY
+    jsr PUT_LINE_ZSTRING_XY                             ; A+ X- Y+ C+ AX+
 
     sec                                                 ; FAIL
 
@@ -2715,7 +2563,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
             ldy CIA_2_ICR
             if_mi_then
                 ; NMI occured yes
-                jmp KERNAL_NNMI20                   ; Continue at original Kernal NMI handler
+                jmp KERNAL_NNMI20                       ; Continue at original Kernal NMI handler
             else_end
 
             ; NMI occured no
@@ -2765,8 +2613,8 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
 
             jsr RESET_FILE_IO
 
-            inc NMI_ENTRY_COUNT                     ; TRUE -> FALSE: allow entry
-            jmp RUN                                 ; Resume
+            inc NMI_ENTRY_COUNT                         ; TRUE -> FALSE: allow entry
+            jmp RUN                                     ; Resume
 .endproc
 
 ;endregion
@@ -2788,7 +2636,7 @@ OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LE
         sta BL
         lda TABLE_COMMAND_NAME_HI, x
         sta BH
-        jsr ZSTRING_AX_COMPARE_ZSTRING_BX               ; A+ X- Y+ Z+
+        jsr ZSTRING_AX_COMPARE_ZSTRING_BX               ; A+ X- Y+ Z+ BX+
         beq _end                                        ; Z=1 -> equal -> break
     next
         dex
