@@ -2487,18 +2487,16 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 ;region Keyboard
 
 ;;; summary: Pause on SHIFT
+;;; changed: A+
 .proc PAUSE_ON_SHIFT
     from_loop
-        lda z:ZPKERNAL_SFDX
-            ; $CB Matrix code of key currently being pressed. Values: 
-            ; $00-$3F: Keyboard matrix code
-            ; $40: No key is currently pressed
-        eor # $40
-        ora KVAR_SHFLAG
-        ; $028D Shift key indicator. Bits:
+        lda KVAR_SHFLAG
+        ; KVAR_SHFLAG = $028D Shift key indicator. Bits:
         ; Bit #0: 1 = One or more of left Shift, right Shift or Shift Lock is currently being pressed or locked.
         ; Bit #1: 1 = Commodore is currently being pressed.
         ; Bit #2: 1 = Control is currently being pressed.
+        ; Other bits are 0.
+        beq _end                                        ; Not SHIFT, CONTROL, COMMODORE Key pressed -> break
     next
         bne _loop
     end
