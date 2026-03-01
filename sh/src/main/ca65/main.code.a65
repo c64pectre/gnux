@@ -318,7 +318,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
             bcc ITERATE_COMMAND_LINE::_loop             ; OK -> continue
 
             ; Error redirecting input from file
-            ldx ERROR_NUMBER_CANT_OPEN_INPUT_FILE
+            ldx # ERROR_NUMBER_CANT_OPEN_INPUT_FILE
             jsr PUT_ERROR_X_NUMBER
 
             rts
@@ -341,7 +341,7 @@ LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
                 bcc ITERATE_COMMAND_LINE::_loop         ; OK -> continue
 
                 ; Error redirecting output to printer
-                ldx ERROR_NUMBER_PRINTER_NOT_PRESENT
+                ldx # ERROR_NUMBER_PRINTER_NOT_PRESENT
                 jsr PUT_ERROR_X_NUMBER
 
                 rts
