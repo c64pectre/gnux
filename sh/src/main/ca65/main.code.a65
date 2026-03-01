@@ -954,7 +954,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     clc                                                 ; C0
     and # PROCESS_DISK_STATUS_OPEN                      ; A+ N+ Z+
     if_ne_then
-        jsr OPEN_DISK_COMMAND_CHANNEL            ; A+ X+ Y+ C+
+        jsr OPEN_DISK_COMMAND_CHANNEL                   ; A+ X+ Y+ C+
     else_end
 
     if_cc_then
@@ -982,7 +982,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     lda z:CL                                            ; A = FLAGS
     and # PROCESS_DISK_STATUS_CLOSE                     ; A+ N+ Z+
     if_ne_then
-        jsr CLOSE_DISK_COMMAND_CHANNEL           ; A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+        jsr CLOSE_DISK_COMMAND_CHANNEL                  ; A+ X+ Y+ P- DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
     else_end
 
     rts
@@ -1222,46 +1222,18 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 ;;; changed: A+ X+ Y+ AX+
 .proc CMD_RM
     lda GNUX_ARGC_LO
-    cmp # 2
-    if_ne_then
+    cmp # 1
+    if_eq_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
         jsr PUT_ERROR_X_NUMBER
         rts
     else_end
 
-    ; AX := = ARGV[1]
-    lda # 1
-    jsr GET_AX_ARGV_A
-    jsr ZSTRING_AX_LENGTH
-    cpy # FILE_NAME_MAX_LENGTH + 1
-    if_eq_then
-        ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
-        jsr PUT_ERROR_X_NUMBER
-        rts
-    else_end
-
-    ldx # DISK_COMMAND_LA
-    jsr KERNAL_CHKOUT                                   ; A+ X+ Y- C+
-    if_cs_then
-        ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
-        jsr PUT_ERROR_X_NUMBER
-        rts
-    else_end
-
-    ; "s"
-    lda # PETSCII_LATIN_LETTER_S
-    jsr KERNAL_CHROUT
-
-    ; ":"
-    lda # PETSCII_COLON
-    jsr KERNAL_CHROUT
-
-    ; FILE
-    jsr OUT_PUT_ZSTRING_AX
-
-    ldx GNUX_WORK_DEVICE
-    lda # PROCESS_DISK_STATUS_SHOW
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+    ; ARGC >= 2
+    ; ARGV.FOR_EACH(START_AT=1, (A) -> DO_RM)
+    ldx # < RM_LAMBDA
+    ldy # > RM_LAMBDA
+    jsr FOR_EACH_ARG
 
     rts
 .endproc
@@ -1365,7 +1337,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     else_end
 
     ; ARGC >= 2
-    ; SEQUENCE(1,ARGC).FOREACH((A) -> DO_PR_ARG_INDEX_A)
+    ; ARGV.FOR_EACH(START_AT=1, (A) -> DO_CAT)
     ldx # < CAT_LAMBDA
     ldy # > CAT_LAMBDA
     jsr FOR_EACH_ARG
@@ -1394,6 +1366,47 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     sta z:DH
     jsr SHOW_OR_CHANGE_DEVICE
 
+    rts
+.endproc
+
+;endregion
+
+;region Implementation of CMD_RM
+
+.proc RM_LAMBDA
+    jsr ZSTRING_AX_LENGTH
+    cpy # FILE_NAME_MAX_LENGTH + 1
+    if_eq_then
+        ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
+        jsr PUT_ERROR_X_NUMBER
+        rts
+    else_end
+
+    ldx # DISK_COMMAND_LA
+    jsr KERNAL_CHKOUT                                   ; A+ X+ Y- C+
+    if_cs_then
+        ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
+        jsr PUT_ERROR_X_NUMBER
+        rts
+    else_end
+
+    ; "s"
+    lda # PETSCII_LATIN_LETTER_S
+    jsr KERNAL_CHROUT
+
+    ; ":"
+    lda # PETSCII_COLON
+    jsr KERNAL_CHROUT
+
+    ; FILE
+    jsr OUT_PUT_ZSTRING_AX
+
+    ldx GNUX_WORK_DEVICE
+    lda # PROCESS_DISK_STATUS_SHOW
+    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+
+
+    clc                                                 ; Continue for each
     rts
 .endproc
 
