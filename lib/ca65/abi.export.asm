@@ -22,12 +22,12 @@
 .export GNUX_OUT_LA             := $0337    ; 0: screen
 
 ;;; summary: Argument count
-.export GNUX_ARGC               := $033C
+.export GNUX_ARGC               := $0338
 .export GNUX_ARGC_LO            := GNUX_ARGC + 0
 .export GNUX_ARGC_HI            := GNUX_ARGC + 1
 
 ;;; summary: Argument values: pointer to array of ZSTRING
-.export GNUX_PARGV              := $033E
+.export GNUX_PARGV              := $033A
 .export GNUX_PARGV_LO           := GNUX_PARGV + 0
 .export GNUX_PARGV_HI           := GNUX_PARGV + 1
 

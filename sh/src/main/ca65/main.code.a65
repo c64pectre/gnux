@@ -24,25 +24,35 @@ KERNAL_NNMI20 := $FE72                                  ; Kernal nnmi20 continua
 
 ;region Memory areas
 
-; Area 1: $0200-$0258 89 bytes Command line
-AREA_1       := KVAR_BUF_BUFOFS
-AREA_1_LAST  := KVAR_BUF_BUFOFS_LAST
-AREA_1_SIZE  =  KVAR_BUF_BUFOFS_SIZE
+; Area 1: $0200-$0258 (89 bytes) : Command line / Stream copy buffer
+AREA_1_FIRST := $0200
+AREA_1_LAST  := $0258
+AREA_1_SIZE  =  AREA_1_LAST - AREA_1_FIRST + 1
+AREA_1 := AREA_1_FIRST
 
-; Area 2: $02A7-$02FF 89 bytes
-AREA_2      := KVAR_UNUSED_1
-AREA_2_LAST := KVAR_UNUSED_1_LAST
-AREA_2_SIZE =  KVAR_UNUSED_1_SIZE
+; Area 2: $0293-$02A4 (18)
+AREA_2_FIRST := $0293
+AREA_2_LAST  := $02A4
+AREA_2_SIZE   = AREA_2_LAST - AREA_2_LAST + 1
+AREA_2       := AREA_2_FIRST
 
-; Area 3: $0334-$033B 8 bytes - ABI
-AREA_3      := KVAR_UNUSED_2
-AREA_3_LAST := KVAR_UNUSED_2_LAST
-AREA_3_SIZE =  KVAR_UNUSED_2_SIZE
+; Area 3: $02A7-$02FF (89 bytes) : ARGV
+AREA_3_FIRST := $02A7
+AREA_3_LAST  := $02FF
+AREA_3_SIZE   = AREA_3_LAST - AREA_3_FIRST + 1
+AREA_3       := AREA_3_FIRST
 
-; Area 4: $033C-$03FF 196 bytes
-AREA_4      := KERNAL_TBUFFR
-AREA_4_LAST := KVAR_UNUSED_3_LAST
-AREA_4_SIZE =  AREA_4_LAST - AREA_4 + 1
+; Area 3: $0334-$033B (8 bytes) : ABI
+AREA_4_FIRST := $0334
+AREA_4_LAST  := $033B
+AREA_4_SIZE   = AREA_4_LAST - AREA_4_FIRST + 1
+AREA_4       := AREA_4_FIRST
+
+; Area 5: $033C-$03FF (196 bytes)
+AREA_5_FIRST := $033C
+AREA_5_LAST  := $03FF
+AREA_5_SIZE   = AREA_5_LAST - AREA_5 + 1
+AREA_5       := AREA_5_LAST - AREA_5_FIRST + 1
 
 ;endregion
 
@@ -55,78 +65,88 @@ AREA_4_SIZE =  AREA_4_LAST - AREA_4 + 1
 ; end of ABI
 
 ;;; Command line
-COMMAND_LINE      := AREA_1
 COMMAND_LINE_SIZE =  82
         .assert COMMAND_LINE_SIZE <= AREA_1_SIZE , error
-COMMAND_LINE_LAST := COMMAND_LINE + COMMAND_LINE_SIZE
+COMMAND_LINE       := AREA_1
+COMMAND_LINE_AFTER := COMMAND_LINE + COMMAND_LINE_SIZE
+COMMAND_LINE_LAST  := COMMAND_LINE_AFTER - 1
 
-ARGV      := AREA_4 + 4                                 ; $0340 ; AREA_4 + 4
-ARGV_0    := ARGV + 0                                   ; $0340 ; AREA_4 + 4
-ARGV_0_LO := ARGV_0                                     ; $0340 ; AREA_4 + 4
-ARGV_0_HI := ARGV_0 + 1                                 ; $0341 ; AREA_4 + 5
-ARGV_1    := ARGV + 2                                   ; $0342 ; AREA_4 + 6
-ARGV_1_LO := ARGV_1                                     ; $0342 ; AREA_4 + 6
-ARGV_1_HI := ARGV_1 + 1                                 ; $0343 ; AREA_4 + 7
-ARGV_2    := ARGV + 4                                   ; $0344 ; AREA_4 + 8
-ARGV_2_LO := ARGV_2                                     ; $0344 ; AREA_4 + 8
-ARGV_2_HI := ARGV_2 + 1                                 ; $0345 ; AREA_4 + 9
-ARGV_3    := ARGV + 6                                   ; $0346 ; AREA_4 + 10
-ARGV_3_LO := ARGV_3                                     ; $0346 ; AREA_4 + 10
-ARGV_3_HI := ARGV_3 + 1                                 ; $0347 ; AREA_4 + 11
-ARGV_4    := ARGV + 8                                   ; $0348 ; AREA_4 + 12
-ARGV_4_LO := ARGV_4                                     ; $0348 ; AREA_4 + 12
-ARGV_4_HI := ARGV_4 + 1                                 ; $0349 ; AREA_4 + 13
-ARGV_5    := ARGV + 10                                  ; $034A ; AREA_4 + 14
-ARGV_5_LO := ARGV_5                                     ; $034A ; AREA_4 + 14
-ARGV_5_HI := ARGV_5 + 1                                 ; $034B ; AREA_4 + 15
-ARGV_6    := ARGV + 12                                  ; $034C ; AREA_4 + 16
-ARGV_6_LO := ARGV_6                                     ; $034C ; AREA_4 + 16
-ARGV_6_HI := ARGV_6 + 1                                 ; $034D ; AREA_4 + 17
-ARGV_7    := ARGV + 14                                  ; $034E ; AREA_4 + 18
-ARGV_7_LO := ARGV_7                                     ; $034E ; AREA_4 + 18
-ARGV_7_HI := ARGV_7 + 1                                 ; $034F ; AREA_4 + 19
-ARGV_8    := ARGV + 16                                  ; $0350 ; AREA_4 + 20
-ARGV_8_LO := ARGV_8                                     ; $0350 ; AREA_4 + 20
-ARGV_8_HI := ARGV_8 + 1                                 ; $0351 ; AREA_4 + 21
-ARGV_9    := ARGV + 18                                  ; $0352 ; AREA_4 + 22
-ARGV_9_LO := ARGV_9                                     ; $0352 ; AREA_4 + 22
-ARGV_9_HI := ARGV_9 + 1                                 ; $0353 ; AREA_4 + 23
-
-; String buffer for disk command, directory, file. Need 40 bytes + 1 for NUL.
-DISK_COMMAND_LENGTH = 41
-DISK_COMMAND_TEXT               := AREA_4 + 24 + 19
-
-; Disk status Max is 35 bytes
-DISK_STATUS_LENGTH = 35
-DISK_STATUS_TEXT                := AREA_4 + 24 + 19 + 41
-DISK_STATUS_TEXT_CODE_0         := DISK_STATUS_TEXT + 0
-DISK_STATUS_TEXT_CODE_1         := DISK_STATUS_TEXT + 1
-
-;;; summary: Name of loaded program, if any (then LOADED_COMMAND_NAME[0] != 0) $03A6-$03B4 (14 bytes)
-LOADED_COMMAND_NAME             := AREA_4 + 24 + 19 + 41 + 35
-LOADED_COMMAND_NAME_SIZE        = FILE_NAME_MAX_LENGTH + 1
+;; Global variables
 
 ; Save colors
-SAVE_KVAR_COLOR                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1
-SAVE_VIC_EC                     := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 1
-SAVE_VIC_B0C                    := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 2
+SAVE_KVAR_COLOR                 := AREA_2_FIRST + 0
+SAVE_VIC_EC                     := AREA_2_FIRST + 1
+SAVE_VIC_B0C                    := AREA_2_FIRST + 2
 ; NMI
-SAVE_KERNAL_NMINV_LO            := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 3
-SAVE_KERNAL_NMINV_HI            := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 4
-SAVE_S                          := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 5
-NMI_ENTRY_COUNT                 := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 6
+SAVE_KERNAL_NMINV_LO            := AREA_2_FIRST + 3
+SAVE_KERNAL_NMINV_HI            := AREA_2_FIRST + 4
+SAVE_S                          := AREA_2_FIRST + 5
+NMI_ENTRY_COUNT                 := AREA_2_FIRST + 6
 ; IN/OUT
-IN_STATUS                       := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 7
-OUT_STATUS                      := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 8
+IN_STATUS                       := AREA_2_FIRST + 7
+OUT_STATUS                      := AREA_2_FIRST + 8
 
-LOAD_COMMAND_NAME               := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 9
+LOAD_COMMAND_NAME               := AREA_2_FIRST + 9
 LOAD_COMMAND_NAME_LO            := LOAD_COMMAND_NAME + 0
 LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 
 ; FOR_EACH_ARGC
-FOR_EACH_ARG_LAMBDA             := AREA_4 + 24 + 19 + 41 + 35 + FILE_NAME_MAX_LENGTH + 1 + 11
-FOR_EACH_ARG_LAMBDA_LO          := FOR_EACH_ARG_LAMBDA
+FOR_EACH_ARG_LAMBDA             := AREA_2_FIRST + 11
+FOR_EACH_ARG_LAMBDA_LO          := FOR_EACH_ARG_LAMBDA + 0
 FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
+
+;endregion
+
+;region Global variables - Argv, disk text, loaded command text
+
+ARGV_FIRST                  := AREA_3 + 0
+ARGV                        := ARGV_FIRST
+ARGV_0                      := ARGV + 0 * SIZEOF_POINTER
+ARGV_0_LO                   := ARGV_0    
+ARGV_0_HI                   := ARGV_0 + 1
+ARGV_1                      := ARGV + 1 * SIZEOF_POINTER
+ARGV_1_LO                   := ARGV_1    
+ARGV_1_HI                   := ARGV_1 + 1
+ARGV_2                      := ARGV + 2 * SIZEOF_POINTER
+ARGV_2_LO                   := ARGV_2    
+ARGV_2_HI                   := ARGV_2 + 1
+ARGV_3                      := ARGV + 3 * SIZEOF_POINTER
+ARGV_3_LO                   := ARGV_3    
+ARGV_3_HI                   := ARGV_3 + 1
+ARGV_4                      := ARGV + 4 * SIZEOF_POINTER
+ARGV_4_LO                   := ARGV_4    
+ARGV_4_HI                   := ARGV_4 + 1
+ARGV_5                      := ARGV + 5 * SIZEOF_POINTER
+ARGV_5_LO                   := ARGV_5    
+ARGV_5_HI                   := ARGV_5 + 1
+ARGV_6                      := ARGV + 6 * SIZEOF_POINTER
+ARGV_6_LO                   := ARGV_6    
+ARGV_6_HI                   := ARGV_6 + 1
+ARGV_7                      := ARGV + 7 * SIZEOF_POINTER
+ARGV_7_LO                   := ARGV_7    
+ARGV_7_HI                   := ARGV_7 + 1
+ARGV_8                      := ARGV + 8 * SIZEOF_POINTER
+ARGV_8_LO                   := ARGV_8    
+ARGV_8_HI                   := ARGV_8 + 1
+ARGV_9                      := ARGV + 9 * SIZEOF_POINTER
+ARGV_9_LO                   := ARGV_9    
+ARGV_9_HI                   := ARGV_9 + 1
+ARGV_AFTER                  := ARGV_9_HI + 1
+ARGV_LAST                   := ARGV_AFTER - 1
+
+; Disk status Max is 35 bytes + 1 for NUL
+DISK_TEXT_FIRST             := ARGV_AFTER
+DISK_TEXT                   := DISK_TEXT_FIRST
+DISK_TEXT_CODE_0            := DISK_TEXT + 0
+DISK_TEXT_CODE_1            := DISK_TEXT + 1
+DISK_TEXT_AFTER             := DISK_TEXT_FIRST + DISK_COMMAND_LENGTH
+DISK_TEXT_LAST              := DISK_TEXT_AFTER
+
+;;; summary: Name of loaded program, if any (then LOADED_COMMAND_NAME[0] != 0) $03A6-$03B4 (14 bytes)
+LOADED_COMMAND_NAME_FIRST   := DISK_TEXT_AFTER
+LOADED_COMMAND_NAME_AFTER   := LOADED_COMMAND_NAME_FIRST + FILE_NAME_LENGTH + 1
+LOADED_COMMAND_NAME_LAST    := LOADED_COMMAND_NAME_AFTER - 1
+LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 
 ;endregion
 
@@ -572,14 +592,14 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 ;;; in:
 ;;;   BYTE[] DX=POINTER_COMMAND_LINE  Pointer in command line, initially to the '>'. Advanced to after file name.
 ;;; out:
-;;;   AX: ZSTRING: DISK_COMMAND_TEXT: file name unquoted. May be empty.
+;;;   AX: ZSTRING: DISK_TEXT: file name unquoted. May be empty.
 ;;; changed: A+ X- Y+ AX+ BX+ DL+
 .proc GET_ZSTRING_AX_FILE_NAME_FROM_COMMAND_LINE
     ; check Y = 0
     ; [DX] != NUL and [DX] != PETSCII_SPACE and [DX] != PETSCII_NO_BREAK_SPACE and [DX] != PETSCII_PETSCII_LESS_THAN_SIGN and [DX] != PETSCII_PETSCII_GREATER_THAN_SIGN
 
-    ; AX := ZSTRING.NEW(DISK_COMMAND_TEXT)
-    jsr ZSTRING_AX_NEW_DISK_COMMAND_TEXT                ; A+ X- Y- AX+
+    ; AX := ZSTRING.NEW(DISK_TEXT)
+    jsr ZSTRING_AX_NEW_DISK_TEXT                ; A+ X- Y- AX+
 
     ; Skip blanks
     jsr SKIP_BLANKS                                     ; A+ X- Y=0 DL+
@@ -672,7 +692,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
         rts
     else_end
 
-    ; AX=FILE_NAME := ZSTRING.NEW(DISK_COMMAND_TEXT)
+    ; AX=FILE_NAME := ZSTRING.NEW(DISK_TEXT)
     jsr GET_ZSTRING_AX_FILE_NAME_FROM_COMMAND_LINE      ; A+ X- Y+ AX+ BX+ DX+
     if_cc_then
         ; + ",s,w"
@@ -891,10 +911,10 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     ldy # LOAD_SA
     jsr KERNAL_SETLFS
 
-    ; AX := ZSTRING.NEW(DISK_COMMAND_TEXT).COPY_FROM(LOAD_COMMAND_NAME)
-    lda # < DISK_COMMAND_TEXT
+    ; AX := ZSTRING.NEW(DISK_TEXT).COPY_FROM(LOAD_COMMAND_NAME)
+    lda # < DISK_TEXT
     sta z:AL
-    lda # < DISK_COMMAND_TEXT
+    lda # > DISK_TEXT
     sta z:AH
     ldx LOAD_COMMAND_NAME_LO
     ldy LOAD_COMMAND_NAME_HI
@@ -1020,17 +1040,17 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     rts
 .endproc
 
-;;; summary: Read disk status of device `A` into `DISK_STATUS_TEXT`.
+;;; summary: Read disk status of device `A` into `DISK_TEXT`.
 ;;; in:
 ;;;   X: DEVICE
 ;;; out:
 ;;;   C: 0=OK 1=ERROR
-;;;   DISK_STATUS_TEXT: Disk status that has been read
+;;;   DISK_TEXT: Disk status that has been read
 ;;; changed: A+ X+ Y+ C+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 .proc READ_DISK_STATUS
-    ; DISK_STATUS_TEXT = ""
+    ; DISK_TEXT = ""
     lda # PETSCII_NUL
-    sta DISK_STATUS_TEXT
+    sta DISK_TEXT
 
     jsr CLRCHN                                          ; Just to be sure ; A+ X+ Y- C0 DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
@@ -1053,7 +1073,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
             bcs _catch                                  ; Error -> throw
             cmp # PETSCII_RETURN
             beq _end                                    ; break
-            sta DISK_STATUS_TEXT , y
+            sta DISK_TEXT , y
         next
             iny
             bne _loop                                   ; bra
@@ -1061,7 +1081,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     catch_finally_end
 
     lda # PETSCII_NUL
-    sta DISK_STATUS_TEXT , y
+    sta DISK_TEXT , y
 
     ; Last chrin causes EOI and C=1
 
@@ -1076,14 +1096,14 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 ;;; changed: A+ X- Y- C+
 .proc CHECK_DISK_STATUS
     if
-        lda DISK_STATUS_TEXT_CODE_0
+        lda DISK_TEXT_CODE_0
         cmp # PETSCII_DIGIT_ZERO                        ; C+ N+ Z+
         bne _then
-        lda DISK_STATUS_TEXT_CODE_1
+        lda DISK_TEXT_CODE_1
         cmp # PETSCII_DIGIT_ZERO                        ; C+ N+ Z+
         beq _end
     then
-        ; ! (DISK_STATUS_TEXT_CODE_0 = "0" & DISK_STATUS_TEXT_CODE_1 = "0")
+        ; ! (DISK_TEXT_CODE_0 = "0" & DISK_TEXT_CODE_1 = "0")
         sec                                             ; ERROR
 
         rts
@@ -1098,8 +1118,8 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 ;;; changed: A+ X+ Y+ P- BX+
 .proc PUT_LINE_DISK_STATUS
     php
-        ldx # < DISK_STATUS_TEXT
-        ldy # > DISK_STATUS_TEXT
+        ldx # < DISK_TEXT
+        ldy # > DISK_TEXT
         jsr PUT_LINE_ZSTRING_XY                         ; BX+
     plp
 
@@ -1192,7 +1212,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     if
         cpy # 0
         beq _then
-        cpy # DISK_COMMAND_MAX_LENGTH + 1
+        cpy # DISK_COMMAND_LENGTH + 1
         bcc _end                                        ; lt
     then                                                ; ge
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1253,7 +1273,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     lda # 1
     jsr GET_AX_ARGV_A
     jsr ZSTRING_AX_LENGTH
-    cpy # FILE_NAME_MAX_LENGTH + 1
+    cpy # FILE_NAME_LENGTH + 1
     if_ge_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
         jsr PUT_ERROR_X_NUMBER
@@ -1264,7 +1284,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     lda # 2
     jsr GET_AX_ARGV_A
     jsr ZSTRING_AX_LENGTH
-    cpy # FILE_NAME_MAX_LENGTH + 1
+    cpy # FILE_NAME_LENGTH + 1
     if_ge_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
         jsr PUT_ERROR_X_NUMBER
@@ -1375,7 +1395,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 
 .proc RM_LAMBDA
     jsr ZSTRING_AX_LENGTH
-    cpy # FILE_NAME_MAX_LENGTH + 1
+    cpy # FILE_NAME_LENGTH + 1
     if_eq_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
         jsr PUT_ERROR_X_NUMBER
@@ -1421,7 +1441,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
     if
         cpy # 0
         beq _then
-        cpy # FILE_NAME_MAX_LENGTH + 1
+        cpy # FILE_NAME_LENGTH + 1
         bcc _end                                        ; lt
     then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1498,7 +1518,7 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
         lda # 1
         jsr GET_AX_ARGV_A
         jsr ZSTRING_AX_LENGTH                           ; A+ X- Y+
-        cpy # FILE_NAME_MAX_LENGTH + 1
+        cpy # FILE_NAME_LENGTH + 1
         if_ge_then
             ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
             jsr PUT_ERROR_X_NUMBER
@@ -1511,8 +1531,8 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
         lda z:AH
         sta z:BH
 
-        ; AX := ZSTRING.NEW(DISK_COMMAND_TEXT)
-        jsr ZSTRING_AX_NEW_DISK_COMMAND_TEXT            ; A+ X- Y- AX+
+        ; AX := ZSTRING.NEW(DISK_TEXT)
+        jsr ZSTRING_AX_NEW_DISK_TEXT            ; A+ X- Y- AX+
 
         ; + "$"
         lda # PETSCII_DOLLAR
@@ -1726,15 +1746,15 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 
 ;region ZSTRING
 
-;;; summary: Make AX a new empty string on DISK_COMMAND_TEXT
+;;; summary: Make AX a new empty string on DISK_TEXT
 ;;; changed: A+ X- Y- AX+
-.proc ZSTRING_AX_NEW_DISK_COMMAND_TEXT
-    lda # < DISK_COMMAND_TEXT
+.proc ZSTRING_AX_NEW_DISK_TEXT
+    lda # < DISK_TEXT
     sta z:AL
-    lda # > DISK_COMMAND_TEXT
+    lda # > DISK_TEXT
     sta z:AH
     lda # PETSCII_NUL
-    sta DISK_COMMAND_TEXT
+    sta DISK_TEXT
 
     rts
 .endproc
@@ -2512,7 +2532,6 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 
     lda # PETSCII_NUL
     sta AX,y
-
     rts
 .endproc
 
