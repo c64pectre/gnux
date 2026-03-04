@@ -73,15 +73,20 @@ COMMAND_LINE_LAST  := COMMAND_LINE_AFTER - 1
 
 ;; Global variables
 
+LOAD_COMMAND_DEVICE             := AREA_2_FIRST + 0
+LOAD_COMMAND_NAME               := AREA_2_FIRST + 1
+LOAD_COMMAND_NAME_LO            := LOAD_COMMAND_NAME + 0
+LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
+
 ; Save colors
-SAVE_KVAR_COLOR                 := AREA_2_FIRST + 0
-SAVE_VIC_EC                     := AREA_2_FIRST + 1
-SAVE_VIC_B0C                    := AREA_2_FIRST + 2
+SAVE_KVAR_COLOR                 := AREA_2_FIRST + 3
+SAVE_VIC_EC                     := AREA_2_FIRST + 4
+SAVE_VIC_B0C                    := AREA_2_FIRST + 5
 ; NMI
-SAVE_KERNAL_NMINV_LO            := AREA_2_FIRST + 3
-SAVE_KERNAL_NMINV_HI            := AREA_2_FIRST + 4
-SAVE_S                          := AREA_2_FIRST + 5
-NMI_ENTRY_COUNT                 := AREA_2_FIRST + 6
+SAVE_KERNAL_NMINV_LO            := AREA_2_FIRST + 6
+SAVE_KERNAL_NMINV_HI            := AREA_2_FIRST + 7
+SAVE_S                          := AREA_2_FIRST + 8
+NMI_ENTRY_COUNT                 := AREA_2_FIRST + 9
 ; IN/OUT
 IN_STATUS                       := AREA_2_FIRST + 7
 OUT_STATUS                      := AREA_2_FIRST + 8
@@ -853,7 +858,7 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 
 ;;; summary: Load program, if not already done so.
 ;;; in:
-;;;   AX: Name of program to load.
+;;;   AX: Name of command to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_PROGRAM_POINTER_NAME+ LOAD_PROGRAM_DEVICE+
@@ -1159,7 +1164,7 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 
 ;;; summary: Load command/program
 ;;; in:
-;;;   ARGV[1]: Program name
+;;;   ARGV[1]: Command name. ".sh" is added.
 .proc CMD_LOAD
     lda GNUX_ARGC_LO
     cmp # 2
