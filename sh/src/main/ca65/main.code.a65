@@ -86,12 +86,14 @@ NMI_ENTRY_COUNT                 := AREA_2_FIRST + 6
 IN_STATUS                       := AREA_2_FIRST + 7
 OUT_STATUS                      := AREA_2_FIRST + 8
 
-LOAD_COMMAND_NAME               := AREA_2_FIRST + 9
-LOAD_COMMAND_NAME_LO            := LOAD_COMMAND_NAME + 0
-LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
+LOAD_PROGRAM_POINTER_NAME               := AREA_2_FIRST + 9
+LOAD_PROGRAM_POINTER_NAME_LO            := LOAD_PROGRAM_POINTER_NAME + 0
+LOAD_PROGRAM_POINTER_NAME_HI            := LOAD_PROGRAM_POINTER_NAME + 1
+
+LOAD_PROGRAM_DEVICE             := AREA_2_FIRST + 11
 
 ; FOR_EACH_ARGC
-FOR_EACH_ARG_LAMBDA             := AREA_2_FIRST + 11
+FOR_EACH_ARG_LAMBDA             := AREA_2_FIRST + 12
 FOR_EACH_ARG_LAMBDA_LO          := FOR_EACH_ARG_LAMBDA + 0
 FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 
@@ -142,11 +144,11 @@ DISK_TEXT_CODE_1            := DISK_TEXT + 1
 DISK_TEXT_AFTER             := DISK_TEXT_FIRST + DISK_COMMAND_LENGTH
 DISK_TEXT_LAST              := DISK_TEXT_AFTER
 
-;;; summary: Name of loaded program, if any (then LOADED_COMMAND_NAME[0] != 0) $03A6-$03B4 (14 bytes)
-LOADED_COMMAND_NAME_FIRST   := DISK_TEXT_AFTER
-LOADED_COMMAND_NAME_AFTER   := LOADED_COMMAND_NAME_FIRST + FILE_NAME_LENGTH + 1
-LOADED_COMMAND_NAME_LAST    := LOADED_COMMAND_NAME_AFTER - 1
-LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
+;;; summary: Name of loaded program, if any (then LOADED_PROGRAM_NAME[0] != 0) $03A6-$03B4 (14 bytes)
+LOADED_PROGRAM_NAME_FIRST   := DISK_TEXT_AFTER
+LOADED_PROGRAM_NAME_AFTER   := LOADED_PROGRAM_NAME_FIRST + FILE_NAME_MAX_LENGTH + 1
+LOADED_PROGRAM_NAME_LAST    := LOADED_PROGRAM_NAME_AFTER - 1
+LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 
 ;endregion
 
@@ -228,7 +230,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     sta GNUX_OUT_LA                                     ; 0 = Screen
 
     ; Set no program loaded
-    sta LOADED_COMMAND_NAME
+    sta LOADED_PROGRAM_NAME
 
     ; Save NMI handler
     lda KERNAL_NMINV_LO
@@ -266,8 +268,8 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 ;;; summary: Show prompt
 ;;; changed: A+ X- Y+ AX+
 .proc SHOW_PROMPT
-    ldx # < RESOURCE_ZSTRING_PROMPT
-    ldY # > RESOURCE_ZSTRING_PROMPT
+    ldx # < RESOURCE_STRING_PROMPT
+    ldY # > RESOURCE_STRING_PROMPT
     jsr PUT_ZSTRING_XY                                  ; BX+
 
     rts
@@ -333,7 +335,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
                 bcs _catch
                 jsr TRY_BUILT_IN_COMMAND
                 if_cs_then                              ; Not built-in command
-                    jsr LOAD_COMMAND_IF_NOT_ALREADY_LOADED
+                    jsr LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
                     if_cc_then
                         jsr EXECUTE_COMMAND
                     else_end
@@ -598,9 +600,6 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     ; check Y = 0
     ; [DX] != NUL and [DX] != PETSCII_SPACE and [DX] != PETSCII_NO_BREAK_SPACE and [DX] != PETSCII_PETSCII_LESS_THAN_SIGN and [DX] != PETSCII_PETSCII_GREATER_THAN_SIGN
 
-    ; AX := ZSTRING.NEW(DISK_TEXT)
-    jsr ZSTRING_AX_NEW_DISK_TEXT                ; A+ X- Y- AX+
-
     ; Skip blanks
     jsr SKIP_BLANKS                                     ; A+ X- Y=0 DL+
     cmp # PETSCII_NUL
@@ -621,11 +620,11 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
             inc z:DL
         else_end
 
-        ; ZSTRING BX=FILE_NAME := POINTER_COMMAND_LINE
+        ; ZSTRING AX=FILE_NAME := POINTER_COMMAND_LINE
         lda z:DL
-        sta z:BL
+        sta z:AL
         lda z:DH
-        sta z:BH
+        sta z:AH
     pla
     cmp # PETSCII_QUOTATION_MARK
     if_eq_then
@@ -643,6 +642,28 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
         inc z:DL
     else_end
  
+    jsr ZSTRING_AX_LENGTH
+    cpy # 0
+    if_eq_then
+        ldx # ERROR_NUMBER_MISSING_FILE_NAME
+        jsr PUT_ERROR_X_NUMBER                          ; C1
+        rts
+    else_end
+
+    cpy # FILE_NAME_MAX_LENGTH + 1
+    if_ge_then
+        ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
+        jsr PUT_ERROR_X_NUMBER                          ; C1
+        rts
+    else_end
+
+    ; BX := AX
+    lda AL
+    sta BL
+    lda AH
+    sta BH
+    ; AX := ZSTRING.NEW(DISK_TEXT).COPY_FROM(BX)
+    jsr ZSTRING_AX_NEW_DISK_TEXT                        ; A+ X- Y- AX+
     jsr ZSTRING_AX_COPY_FROM_ZSTRING_BX                 ; A+ X- Y+
 
     clc                                                 ; OK
@@ -696,8 +717,8 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     jsr GET_ZSTRING_AX_FILE_NAME_FROM_COMMAND_LINE      ; A+ X- Y+ AX+ BX+ DX+
     if_cc_then
         ; + ",s,w"
-        ldx # < RESOURCE_ZSTRING_SEQ_WRITE
-        ldy # > RESOURCE_ZSTRING_SEQ_WRITE
+        ldx # < RESOURCE_STRING_SEQ_WRITE
+        ldy # > RESOURCE_STRING_SEQ_WRITE
         jsr ZSTRING_AX_APPEND_ZSTRING_XY                ; A+ X- Y+ BX+ CX+
         ; Open
         lda # REDIRECT_OUTPUT_LA
@@ -830,17 +851,17 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 
 ;region Loading
 
-;;; summary: Load program with, if not already done so.
+;;; summary: Load program, if not already done so.
 ;;; in:
 ;;;   AX: Name of program to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_COMMAND_NAME+
-.proc LOAD_COMMAND_IF_NOT_ALREADY_LOADED
+;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_PROGRAM_POINTER_NAME+ LOAD_PROGRAM_DEVICE+
+.proc LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
     ; Already loaded?
-    lda # < LOADED_COMMAND_NAME
+    lda # < LOADED_PROGRAM_NAME
     sta z:BL
-    lda # > LOADED_COMMAND_NAME
+    lda # > LOADED_PROGRAM_NAME
     sta z:BH
     jsr ZSTRING_AX_COMPARE_ZSTRING_BX                   ; A+ X- Y+ Z+
     if_eq_then
@@ -848,7 +869,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
         rts
     else_end
 
-    jsr LOAD_COMMAND_FROM_WORK_OR_SYS_DISK              ; A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_COMMAND_NAME+
+    jsr LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK              ; A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_PROGRAM_POINTER_NAME+
 
     rts
 .endproc
@@ -858,20 +879,22 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 ;;;   AX: ZSTRING: Name of program to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_COMMAND_NAME+
-.proc LOAD_COMMAND_FROM_WORK_OR_SYS_DISK
+;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_PROGRAM_POINTER_NAME+
+.proc LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK
     lda z:AL
-    sta LOAD_COMMAND_NAME_LO
+    sta LOAD_PROGRAM_POINTER_NAME_LO
     lda z:AH
-    sta LOAD_COMMAND_NAME_HI
+    sta LOAD_PROGRAM_POINTER_NAME_HI
 
     ; Try work disk
-    ldx GNUX_WORK_DEVICE
-    jsr LOAD_COMMAND ; AX+
+    lda GNUX_WORK_DEVICE
+    sta LOAD_PROGRAM_DEVICE
+    jsr LOAD_COMMAND                                    ; AX+ ...
     if_cs_then
         ; Load from work disk failed.
         ; Try system disk
-        ldx GNUX_SYS_DEVICE
+        lda GNUX_SYS_DEVICE
+        sta LOAD_PROGRAM_DEVICE
         jsr LOAD_COMMAND                                ; A+ X+ Y+ C+ AX+ BX+ DL+
         if_cs_then
             ; Load from system disk failed too.
@@ -884,12 +907,12 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 
     ; Save name of loaded program.
     ; notes: We know program name is max 16 characters + 1 for NUL
-    lda # < LOADED_COMMAND_NAME
+    lda # < LOADED_PROGRAM_NAME
     sta z:AL
-    lda # > LOADED_COMMAND_NAME
+    lda # > LOADED_PROGRAM_NAME
     sta z:AH
-    ldx # < LOAD_COMMAND_NAME_LO
-    ldy # > LOAD_COMMAND_NAME_HI
+    ldx LOAD_PROGRAM_POINTER_NAME_LO
+    ldy LOAD_PROGRAM_POINTER_NAME_HI
     jsr ZSTRING_AX_COPY_FROM_ZSTRING_XY                 ; A+ X- Y+ BX+
 
     clc                                                 ; OK
@@ -899,31 +922,23 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 
 ;;; summary: Load program
 ;;; in:
-;;;   UBYTE   X=DEVICE           Device address
-;;;   ZSTRING LOAD_COMMAND_NAME  Name of the command to load
+;;;   ZSTRING LOAD_PROGRAM_POINTER_NAME  Name of the command to load
+;;;   UBYTE   LOAD_PROGRAM_DEVICE        Device address
 ;;; out:
 ;;;   C: 0: OK , 1: FAIL
-;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+
+;;; changed: A+ X+ Y+ C+ AX+ BX+
 .proc LOAD_COMMAND
-    ; require LOAD_COMMAND_NAME.LENGTH <= FILE_NAME_MAX_LENGTH
-    stx z:DL                                            ; DL = X = DEVICE
+    ; require LOAD_PROGRAM_POINTER_NAME.LENGTH <= FILE_NAME_MAX_LENGTH
     lda # LOAD_LA
+    ldx LOAD_PROGRAM_DEVICE
     ldy # LOAD_SA
     jsr KERNAL_SETLFS
 
-    ; AX := ZSTRING.NEW(DISK_TEXT).COPY_FROM(LOAD_COMMAND_NAME)
-    lda # < DISK_TEXT
+    ; AX := ZSTRING.NEW(DISK_TEXT).COPY_FROM(LOAD_PROGRAM_POINTER_NAME)
+    lda LOAD_PROGRAM_POINTER_NAME_LO
     sta z:AL
-    lda # > DISK_TEXT
+    lda LOAD_PROGRAM_POINTER_NAME_HI
     sta z:AH
-    ldx LOAD_COMMAND_NAME_LO
-    ldy LOAD_COMMAND_NAME_HI
-    jsr ZSTRING_AX_COPY_FROM_ZSTRING_XY
-
-    ; + ".sh"
-    ldx # < RESOURCE_STRING_DOT_SH
-    ldy # > RESOURCE_STRING_DOT_SH
-    jsr ZSTRING_AX_APPEND_ZSTRING_XY                    ; A+ X- Y+ BX+ CX+
 
     ; Load
     jsr ZSTRING_AX_LENGTH
@@ -931,7 +946,6 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     ldx z:AL
     ldy z:AH
     jsr KERNAL_SETNAM
-    ldx z:DL                                              ; X = DL = DEVICE
     lda # KERNAL_LOAD_LOAD
     jsr KERNAL_LOAD                                     ; No need to close
     if_cc_then
@@ -948,11 +962,11 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     else_end
 
     ; Device present. (Attempt to) read (but not show) disk status.
-    ldx z:DL                                            ; X = DL = DEVICE
+    ldx LOAD_PROGRAM_DEVICE
     lda # 0
     jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
 
-    ldx # ERROR_NUMBER_COMMAND_NOT_FOUND
+    ldx # ERROR_NUMBER_PROGRAM_NOT_FOUND
     sec                                                 ; FAIL
 
     rts
@@ -1143,7 +1157,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     rts
 .endproc
 
-;;; summary: Load program
+;;; summary: Load command/program
 ;;; in:
 ;;;   ARGV[1]: Program name
 .proc CMD_LOAD
@@ -1161,20 +1175,19 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     jsr ZSTRING_AX_LENGTH
     cpy # 0
     if_eq_then
-        ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
+        ldx # ERROR_NUMBER_MISSING_FILE_NAME
         jsr PUT_ERROR_X_NUMBER
-
         rts
     else_end
 
-    cpy # COMMAND_NAME_MAX_LENGTH + 1
+    cpy # FILE_NAME_MAX_LENGTH + 1
     if_ge_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
         jsr PUT_ERROR_X_NUMBER
         rts
     else_end
 
-    jsr LOAD_COMMAND_IF_NOT_ALREADY_LOADED
+    jsr LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
 
     rts
 .endproc
@@ -1273,7 +1286,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     lda # 1
     jsr GET_AX_ARGV_A
     jsr ZSTRING_AX_LENGTH
-    cpy # FILE_NAME_LENGTH + 1
+    cpy # FILE_NAME_MAX_LENGTH + 1
     if_ge_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
         jsr PUT_ERROR_X_NUMBER
@@ -1284,7 +1297,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     lda # 2
     jsr GET_AX_ARGV_A
     jsr ZSTRING_AX_LENGTH
-    cpy # FILE_NAME_LENGTH + 1
+    cpy # FILE_NAME_MAX_LENGTH + 1
     if_ge_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
         jsr PUT_ERROR_X_NUMBER
@@ -1395,7 +1408,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 
 .proc RM_LAMBDA
     jsr ZSTRING_AX_LENGTH
-    cpy # FILE_NAME_LENGTH + 1
+    cpy # FILE_NAME_MAX_LENGTH + 1
     if_eq_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
         jsr PUT_ERROR_X_NUMBER
@@ -1441,7 +1454,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     if
         cpy # 0
         beq _then
-        cpy # FILE_NAME_LENGTH + 1
+        cpy # FILE_NAME_MAX_LENGTH + 1
         bcc _end                                        ; lt
     then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
@@ -1505,9 +1518,9 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 
     ; In case ARGC == 1
     ; AX := "$"
-    lda # < RESOURCE_ZSTRING_DIR_NAME
+    lda # < RESOURCE_STRING_DIR_NAME
     sta z:AL
-    lda # > RESOURCE_ZSTRING_DIR_NAME
+    lda # > RESOURCE_STRING_DIR_NAME
     sta z:AH
 
     lda GNUX_ARGC_LO
@@ -1518,7 +1531,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
         lda # 1
         jsr GET_AX_ARGV_A
         jsr ZSTRING_AX_LENGTH                           ; A+ X- Y+
-        cpy # FILE_NAME_LENGTH + 1
+        cpy # FILE_NAME_MAX_LENGTH + 1
         if_ge_then
             ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
             jsr PUT_ERROR_X_NUMBER
@@ -1660,9 +1673,9 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 ;;; changed: A+ X+ Y+ AX+ BX+
 .proc SHOW_DEVICE
     jsr OUT_CHKOUT                                      ; A- X- Y- C+
-    lda # < RESOURCE_ZSTRING_DEVICE
+    lda # < RESOURCE_STRING_DEVICE
     sta z:AL
-    lda # > RESOURCE_ZSTRING_DEVICE
+    lda # > RESOURCE_STRING_DEVICE
     sta z:AH
     jsr OUT_PUT_ZSTRING_AX
 
