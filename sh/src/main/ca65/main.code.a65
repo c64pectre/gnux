@@ -73,25 +73,26 @@ COMMAND_LINE_LAST  := COMMAND_LINE_AFTER - 1
 
 ;; Global variables
 
-; Save colors
-SAVE_KVAR_COLOR                 := AREA_2_FIRST + 0
-SAVE_VIC_EC                     := AREA_2_FIRST + 1
-SAVE_VIC_B0C                    := AREA_2_FIRST + 2
-; NMI
-SAVE_KERNAL_NMINV_LO            := AREA_2_FIRST + 3
-SAVE_KERNAL_NMINV_HI            := AREA_2_FIRST + 4
-SAVE_S                          := AREA_2_FIRST + 5
-NMI_ENTRY_COUNT                 := AREA_2_FIRST + 6
-; IN/OUT
-IN_STATUS                       := AREA_2_FIRST + 7
-OUT_STATUS                      := AREA_2_FIRST + 8
-
-LOAD_COMMAND_NAME               := AREA_2_FIRST + 9
+LOAD_COMMAND_DEVICE             := AREA_2_FIRST + 0
+LOAD_COMMAND_NAME               := AREA_2_FIRST + 1
 LOAD_COMMAND_NAME_LO            := LOAD_COMMAND_NAME + 0
 LOAD_COMMAND_NAME_HI            := LOAD_COMMAND_NAME + 1
 
+; Save colors
+SAVE_KVAR_COLOR                 := AREA_2_FIRST + 3
+SAVE_VIC_EC                     := AREA_2_FIRST + 4
+SAVE_VIC_B0C                    := AREA_2_FIRST + 5
+; NMI
+SAVE_KERNAL_NMINV_LO            := AREA_2_FIRST + 6
+SAVE_KERNAL_NMINV_HI            := AREA_2_FIRST + 7
+SAVE_S                          := AREA_2_FIRST + 8
+NMI_ENTRY_COUNT                 := AREA_2_FIRST + 9
+; IN/OUT
+IN_STATUS                       := AREA_2_FIRST + 10
+OUT_STATUS                      := AREA_2_FIRST + 11
+
 ; FOR_EACH_ARGC
-FOR_EACH_ARG_LAMBDA             := AREA_2_FIRST + 11
+FOR_EACH_ARG_LAMBDA             := AREA_2_FIRST + 12
 FOR_EACH_ARG_LAMBDA_LO          := FOR_EACH_ARG_LAMBDA + 0
 FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 
@@ -830,9 +831,9 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 
 ;region Loading
 
-;;; summary: Load program with, if not already done so.
+;;; summary: Load command, if not already done so. ".sh" is added to the name.
 ;;; in:
-;;;   AX: Name of program to load.
+;;;   AX: Name of command to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
 ;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_COMMAND_NAME+
@@ -906,6 +907,7 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
 ;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+
 .proc LOAD_COMMAND
     ; require LOAD_COMMAND_NAME.LENGTH <= FILE_NAME_MAX_LENGTH
+    stx LOAD_COMMAND_DEVICE
     stx z:DL                                            ; DL = X = DEVICE
     lda # LOAD_LA
     ldy # LOAD_SA
@@ -931,7 +933,6 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     ldx z:AL
     ldy z:AH
     jsr KERNAL_SETNAM
-    ldx z:DL                                              ; X = DL = DEVICE
     lda # KERNAL_LOAD_LOAD
     jsr KERNAL_LOAD                                     ; No need to close
     if_cc_then
@@ -1143,9 +1144,9 @@ LOADED_COMMAND_NAME         := LOADED_COMMAND_NAME_FIRST
     rts
 .endproc
 
-;;; summary: Load program
+;;; summary: Load command/program
 ;;; in:
-;;;   ARGV[1]: Program name
+;;;   ARGV[1]: Command name. ".sh" is added.
 .proc CMD_LOAD
     lda GNUX_ARGC_LO
     cmp # 2
