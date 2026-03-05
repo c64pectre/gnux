@@ -171,6 +171,10 @@ LOADED_PROGRAM_NAME             := LOADED_PROGRAM_NAME_FIRST
     tsx
     stx SAVE_S
 
+    ; Turn off all Kernal messages
+    lda # KERNAL_MSG_OFF
+    jsr KERNAL_SETMSG
+
     ldx # REGISTER_STACK
     stx z:RP
     stx z:FP
