@@ -67,30 +67,29 @@ AREA_5       := AREA_5_LAST - AREA_5_FIRST + 1
 ;;; Command line
 COMMAND_LINE_SIZE =  82
         .assert COMMAND_LINE_SIZE <= AREA_1_SIZE , error
-COMMAND_LINE       := AREA_1
-COMMAND_LINE_AFTER := COMMAND_LINE + COMMAND_LINE_SIZE
-COMMAND_LINE_LAST  := COMMAND_LINE_AFTER - 1
+COMMAND_LINE                    := AREA_1
+COMMAND_LINE_AFTER              := COMMAND_LINE + COMMAND_LINE_SIZE
+COMMAND_LINE_LAST               := COMMAND_LINE_AFTER - 1
 
 ;; Global variables
 
+LOAD_PROGRAM_DEVICE             := AREA_2_FIRST + 0
+POINTER_LOAD_PROGRAM_NAME       := AREA_2_FIRST + 1
+POINTER_LOAD_PROGRAM_NAME_LO    := POINTER_LOAD_PROGRAM_NAME + 0
+POINTER_LOAD_PROGRAM_NAME_HI    := POINTER_LOAD_PROGRAM_NAME + 1
+
 ; Save colors
-SAVE_KVAR_COLOR                 := AREA_2_FIRST + 0
-SAVE_VIC_EC                     := AREA_2_FIRST + 1
-SAVE_VIC_B0C                    := AREA_2_FIRST + 2
+SAVE_KVAR_COLOR                 := AREA_2_FIRST + 3
+SAVE_VIC_EC                     := AREA_2_FIRST + 4
+SAVE_VIC_B0C                    := AREA_2_FIRST + 5
 ; NMI
-SAVE_KERNAL_NMINV_LO            := AREA_2_FIRST + 3
-SAVE_KERNAL_NMINV_HI            := AREA_2_FIRST + 4
-SAVE_S                          := AREA_2_FIRST + 5
-NMI_ENTRY_COUNT                 := AREA_2_FIRST + 6
+SAVE_KERNAL_NMINV_LO            := AREA_2_FIRST + 6
+SAVE_KERNAL_NMINV_HI            := AREA_2_FIRST + 7
+SAVE_S                          := AREA_2_FIRST + 8
+NMI_ENTRY_COUNT                 := AREA_2_FIRST + 9
 ; IN/OUT
 IN_STATUS                       := AREA_2_FIRST + 7
 OUT_STATUS                      := AREA_2_FIRST + 8
-
-LOAD_PROGRAM_POINTER_NAME               := AREA_2_FIRST + 9
-LOAD_PROGRAM_POINTER_NAME_LO            := LOAD_PROGRAM_POINTER_NAME + 0
-LOAD_PROGRAM_POINTER_NAME_HI            := LOAD_PROGRAM_POINTER_NAME + 1
-
-LOAD_PROGRAM_DEVICE             := AREA_2_FIRST + 11
 
 ; FOR_EACH_ARGC
 FOR_EACH_ARG_LAMBDA             := AREA_2_FIRST + 12
@@ -101,54 +100,54 @@ FOR_EACH_ARG_LAMBDA_HI          := FOR_EACH_ARG_LAMBDA + 1
 
 ;region Global variables - Argv, disk text, loaded command text
 
-ARGV_FIRST                  := AREA_3 + 0
-ARGV                        := ARGV_FIRST
-ARGV_0                      := ARGV + 0 * SIZEOF_POINTER
-ARGV_0_LO                   := ARGV_0    
-ARGV_0_HI                   := ARGV_0 + 1
-ARGV_1                      := ARGV + 1 * SIZEOF_POINTER
-ARGV_1_LO                   := ARGV_1    
-ARGV_1_HI                   := ARGV_1 + 1
-ARGV_2                      := ARGV + 2 * SIZEOF_POINTER
-ARGV_2_LO                   := ARGV_2    
-ARGV_2_HI                   := ARGV_2 + 1
-ARGV_3                      := ARGV + 3 * SIZEOF_POINTER
-ARGV_3_LO                   := ARGV_3    
-ARGV_3_HI                   := ARGV_3 + 1
-ARGV_4                      := ARGV + 4 * SIZEOF_POINTER
-ARGV_4_LO                   := ARGV_4    
-ARGV_4_HI                   := ARGV_4 + 1
-ARGV_5                      := ARGV + 5 * SIZEOF_POINTER
-ARGV_5_LO                   := ARGV_5    
-ARGV_5_HI                   := ARGV_5 + 1
-ARGV_6                      := ARGV + 6 * SIZEOF_POINTER
-ARGV_6_LO                   := ARGV_6    
-ARGV_6_HI                   := ARGV_6 + 1
-ARGV_7                      := ARGV + 7 * SIZEOF_POINTER
-ARGV_7_LO                   := ARGV_7    
-ARGV_7_HI                   := ARGV_7 + 1
-ARGV_8                      := ARGV + 8 * SIZEOF_POINTER
-ARGV_8_LO                   := ARGV_8    
-ARGV_8_HI                   := ARGV_8 + 1
-ARGV_9                      := ARGV + 9 * SIZEOF_POINTER
-ARGV_9_LO                   := ARGV_9    
-ARGV_9_HI                   := ARGV_9 + 1
-ARGV_AFTER                  := ARGV_9_HI + 1
-ARGV_LAST                   := ARGV_AFTER - 1
+ARGV_FIRST                      := AREA_3 + 0
+ARGV                            := ARGV_FIRST
+ARGV_0                          := ARGV + 0 * SIZEOF_POINTER
+ARGV_0_LO                       := ARGV_0    
+ARGV_0_HI                       := ARGV_0 + 1
+ARGV_1                          := ARGV + 1 * SIZEOF_POINTER
+ARGV_1_LO                       := ARGV_1    
+ARGV_1_HI                       := ARGV_1 + 1
+ARGV_2                          := ARGV + 2 * SIZEOF_POINTER
+ARGV_2_LO                       := ARGV_2    
+ARGV_2_HI                       := ARGV_2 + 1
+ARGV_3                          := ARGV + 3 * SIZEOF_POINTER
+ARGV_3_LO                       := ARGV_3    
+ARGV_3_HI                       := ARGV_3 + 1
+ARGV_4                          := ARGV + 4 * SIZEOF_POINTER
+ARGV_4_LO                       := ARGV_4    
+ARGV_4_HI                       := ARGV_4 + 1
+ARGV_5                          := ARGV + 5 * SIZEOF_POINTER
+ARGV_5_LO                       := ARGV_5    
+ARGV_5_HI                       := ARGV_5 + 1
+ARGV_6                          := ARGV + 6 * SIZEOF_POINTER
+ARGV_6_LO                       := ARGV_6    
+ARGV_6_HI                       := ARGV_6 + 1
+ARGV_7                          := ARGV + 7 * SIZEOF_POINTER
+ARGV_7_LO                       := ARGV_7    
+ARGV_7_HI                       := ARGV_7 + 1
+ARGV_8                          := ARGV + 8 * SIZEOF_POINTER
+ARGV_8_LO                       := ARGV_8    
+ARGV_8_HI                       := ARGV_8 + 1
+ARGV_9                          := ARGV + 9 * SIZEOF_POINTER
+ARGV_9_LO                       := ARGV_9    
+ARGV_9_HI                       := ARGV_9 + 1
+ARGV_AFTER                      := ARGV_9_HI + 1
+ARGV_LAST                       := ARGV_AFTER - 1
 
 ; Disk status Max is 35 bytes + 1 for NUL
-DISK_TEXT_FIRST             := ARGV_AFTER
-DISK_TEXT                   := DISK_TEXT_FIRST
-DISK_TEXT_CODE_0            := DISK_TEXT + 0
-DISK_TEXT_CODE_1            := DISK_TEXT + 1
-DISK_TEXT_AFTER             := DISK_TEXT_FIRST + DISK_COMMAND_LENGTH
-DISK_TEXT_LAST              := DISK_TEXT_AFTER
+DISK_TEXT_FIRST                 := ARGV_AFTER
+DISK_TEXT                       := DISK_TEXT_FIRST
+DISK_TEXT_CODE_0                := DISK_TEXT + 0
+DISK_TEXT_CODE_1                := DISK_TEXT + 1
+DISK_TEXT_AFTER                 := DISK_TEXT_FIRST + DISK_COMMAND_LENGTH
+DISK_TEXT_LAST                  := DISK_TEXT_AFTER
 
 ;;; summary: Name of loaded program, if any (then LOADED_PROGRAM_NAME[0] != 0) $03A6-$03B4 (14 bytes)
-LOADED_PROGRAM_NAME_FIRST   := DISK_TEXT_AFTER
-LOADED_PROGRAM_NAME_AFTER   := LOADED_PROGRAM_NAME_FIRST + FILE_NAME_MAX_LENGTH + 1
-LOADED_PROGRAM_NAME_LAST    := LOADED_PROGRAM_NAME_AFTER - 1
-LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
+LOADED_PROGRAM_NAME_FIRST       := DISK_TEXT_AFTER
+LOADED_PROGRAM_NAME_AFTER       := LOADED_PROGRAM_NAME_FIRST + FILE_NAME_MAX_LENGTH + 1
+LOADED_PROGRAM_NAME_LAST        := LOADED_PROGRAM_NAME_AFTER - 1
+LOADED_PROGRAM_NAME             := LOADED_PROGRAM_NAME_FIRST
 
 ;endregion
 
@@ -329,20 +328,13 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
         lda [AX],y
         ; Argument 0 not empty?
         if_ne_then
-            try
-                ldx GNUX_WORK_DEVICE
-                jsr OPEN_DISK_COMMAND_CHANNEL
-                bcs _catch
-                jsr TRY_BUILT_IN_COMMAND
-                if_cs_then                              ; Not built-in command
-                    jsr LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
-                    if_cc_then
-                        jsr EXECUTE_COMMAND
-                    else_end
+            jsr TRY_BUILT_IN_COMMAND
+            if_cs_then                              ; Not built-in command
+                jsr LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
+                if_cc_then
+                    jsr EXECUTE_COMMAND
                 else_end
-            catch_finally
-                jsr CLOSE_DISK_COMMAND_CHANNEL
-            end
+            else_end
         else_end
     else_end
 
@@ -776,7 +768,12 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
     lda TABLE_COMMAND_HANDLER_HI,x
     sta z:DH
 
+    ldx GNUX_WORK_DEVICE
+    jsr OPEN_DISK_COMMAND_CHANNEL
+
     jsr JSR_INDIRECT_DX
+
+    jsr CLOSE_DISK_COMMAND_CHANNEL
 
     clc                                                 ; OK
 
@@ -788,40 +785,38 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 ;;;   Entry point is at $1800
 ;;; changed: A+ X+ Y+ AX+ RP+ FP+
 .proc EXECUTE_COMMAND
-    try
-        ; Save colors
-        lda KVAR_COLOR
-        sta SAVE_KVAR_COLOR
-            lda VIC_EC
-            sta SAVE_VIC_EC
-                lda VIC_B0C
-                sta SAVE_VIC_B0C
-                    ; Call program's entrypoint, passing GNUX_ARGC and ARGV arguments.
-                    ldx # REGISTER_STACK
-                    lda GNUX_ARGC_LO
-                    sta z:0,x
-                    inx
-                    lda GNUX_ARGC_HI
-                    sta z:0,x
-                    inx
-                    lda GNUX_PARGV_LO
-                    sta z:0,x
-                    inx
-                    lda GNUX_ARGC_HI
-                    sta z:0,x
-                    inx
-                    stx z:RP
-                    stx z:FP
-                    ; Execute command/ run program
-                    jsr PROGRAM_ENTRYPOINT
-                lda SAVE_VIC_B0C
-                sta VIC_B0C
-            lda SAVE_VIC_EC
-            sta VIC_EC
-        lda SAVE_KVAR_COLOR
-        sta KVAR_COLOR
-        jsr FILL_COLOR_SCREEN_A
-    catch_finally_end
+    ; Save colors
+    lda KVAR_COLOR
+    sta SAVE_KVAR_COLOR
+        lda VIC_EC
+        sta SAVE_VIC_EC
+            lda VIC_B0C
+            sta SAVE_VIC_B0C
+                ; Call program's entrypoint, passing GNUX_ARGC and ARGV arguments.
+                ldx # REGISTER_STACK
+                lda GNUX_ARGC_LO
+                sta z:0,x
+                inx
+                lda GNUX_ARGC_HI
+                sta z:0,x
+                inx
+                lda GNUX_PARGV_LO
+                sta z:0,x
+                inx
+                lda GNUX_ARGC_HI
+                sta z:0,x
+                inx
+                stx z:RP
+                stx z:FP
+                ; Execute command/ run program
+                jsr PROGRAM_ENTRYPOINT
+            lda SAVE_VIC_B0C
+            sta VIC_B0C
+        lda SAVE_VIC_EC
+        sta VIC_EC
+    lda SAVE_KVAR_COLOR
+    sta KVAR_COLOR
+    jsr FILL_COLOR_SCREEN_A
 
     rts
 .endproc
@@ -853,10 +848,10 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 
 ;;; summary: Load program, if not already done so.
 ;;; in:
-;;;   AX: Name of program to load.
+;;;   AX: ZSTRING: Name of program to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_PROGRAM_POINTER_NAME+ LOAD_PROGRAM_DEVICE+
+;;; changed: A+ X+ Y+ C+ AX+ BX+ LOAD_PROGRAM_NAME+ LOAD_PROGRAM_DEVICE+
 .proc LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
     ; Already loaded?
     lda # < LOADED_PROGRAM_NAME
@@ -869,7 +864,7 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
         rts
     else_end
 
-    jsr LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK              ; A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_PROGRAM_POINTER_NAME+
+    jsr LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK              ; A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_PROGRAM_NAME+
 
     rts
 .endproc
@@ -879,23 +874,31 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 ;;;   AX: ZSTRING: Name of program to load.
 ;;; out:
 ;;;   C: 0=OK 1=FAIL
-;;; changed: A+ X+ Y+ C+ AX+ BX+ DL+ LOAD_PROGRAM_POINTER_NAME+
+;;; changed: A+ X+ Y+ C+ AX+ BX+ LOAD_PROGRAM_NAME+ LOAD_PROGRAM_DEVICE+
 .proc LOAD_PROGRAM_FROM_WORK_OR_SYS_DISK
     lda z:AL
-    sta LOAD_PROGRAM_POINTER_NAME_LO
+    sta POINTER_LOAD_PROGRAM_NAME_LO
     lda z:AH
-    sta LOAD_PROGRAM_POINTER_NAME_HI
+    sta POINTER_LOAD_PROGRAM_NAME_HI
+
+    ; Clear loaded program name, if any, because on partial load (error or cancelled) the program in memory is cooked.
+    lda # PETSCII_NUL
+    sta LOADED_PROGRAM_NAME
 
     ; Try work disk
     lda GNUX_WORK_DEVICE
     sta LOAD_PROGRAM_DEVICE
-    jsr LOAD_COMMAND                                    ; AX+ ...
+    jsr LOAD_PROGRAM                                    ; A+ X+ Y+ C+ AX+
     if_cs_then
-        ; Load from work disk failed.
-        ; Try system disk
-        lda GNUX_SYS_DEVICE
-        sta LOAD_PROGRAM_DEVICE
-        jsr LOAD_COMMAND                                ; A+ X+ Y+ C+ AX+ BX+ DL+
+        cpx # ERROR_NUMBER_CANCELLED
+        if_ne_then
+            ; Load from work disk failed.
+            ; Try system disk
+            lda GNUX_SYS_DEVICE
+            sta LOAD_PROGRAM_DEVICE
+            jsr LOAD_PROGRAM                                ; A+ X+ Y+ C+ AX+
+        else_end
+
         if_cs_then
             ; Load from system disk failed too.
             ; X = ERROR_NUMBER_*
@@ -911,8 +914,8 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
     sta z:AL
     lda # > LOADED_PROGRAM_NAME
     sta z:AH
-    ldx LOAD_PROGRAM_POINTER_NAME_LO
-    ldy LOAD_PROGRAM_POINTER_NAME_HI
+    ldx # < POINTER_LOAD_PROGRAM_NAME_LO
+    ldy # > POINTER_LOAD_PROGRAM_NAME_HI
     jsr ZSTRING_AX_COPY_FROM_ZSTRING_XY                 ; A+ X- Y+ BX+
 
     clc                                                 ; OK
@@ -922,52 +925,79 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 
 ;;; summary: Load program
 ;;; in:
-;;;   ZSTRING LOAD_PROGRAM_POINTER_NAME  Name of the command to load
-;;;   UBYTE   LOAD_PROGRAM_DEVICE        Device address
+;;;   ZSTRING LOAD_PROGRAM_NAME    Name of the program to load
+;;;   UBYTE   LOAD_PROGRAM_DEVICE  Device address
 ;;; out:
 ;;;   C: 0: OK , 1: FAIL
-;;; changed: A+ X+ Y+ C+ AX+ BX+
-.proc LOAD_COMMAND
-    ; require LOAD_PROGRAM_POINTER_NAME.LENGTH <= FILE_NAME_MAX_LENGTH
-    lda # LOAD_LA
-    ldx LOAD_PROGRAM_DEVICE
-    ldy # LOAD_SA
-    jsr KERNAL_SETLFS
+;;;   X: Error number
+;;; changed: A+ X+ Y+ C+ AX+
+.proc LOAD_PROGRAM
+    ; require LOAD_PROGRAM_NAME.LENGTH <= FILE_NAME_MAX_LENGTH
+    try
+        ldx LOAD_PROGRAM_DEVICE
+        jsr OPEN_DISK_COMMAND_CHANNEL
 
-    ; AX := ZSTRING.NEW(DISK_TEXT).COPY_FROM(LOAD_PROGRAM_POINTER_NAME)
-    lda LOAD_PROGRAM_POINTER_NAME_LO
-    sta z:AL
-    lda LOAD_PROGRAM_POINTER_NAME_HI
-    sta z:AH
+        ldx LOAD_PROGRAM_DEVICE
+        lda # LOAD_LA
+        ldy # LOAD_SA
+        jsr KERNAL_SETLFS
 
-    ; Load
-    jsr ZSTRING_AX_LENGTH
-    tya
-    ldx z:AL
-    ldy z:AH
-    jsr KERNAL_SETNAM
-    lda # KERNAL_LOAD_LOAD
-    jsr KERNAL_LOAD                                     ; No need to close
-    if_cc_then
-        rts                                             ; OK
-    else_end
+        lda POINTER_LOAD_PROGRAM_NAME_LO
+        sta AL
+        lda POINTER_LOAD_PROGRAM_NAME_HI
+        sta AH
 
-    ; C = 1
-    ; Load error
-    cmp # KERNAL_ERROR_DEVICE_NOT_PRESENT
-    if_eq_then
-        ; Device not present
-        ldx # ERROR_NUMBER_DEVICE_NOT_PRESENT
-        rts
-    else_end
+        ; Load
+        jsr ZSTRING_AX_LENGTH
+        tya
+        ldx z:AL
+        ldy z:AH
+        jsr KERNAL_SETNAM
+        lda # KERNAL_LOAD_LOAD
+        jsr KERNAL_LOAD                                 ; No need to close
+        ; When cancelled (<STOP> key pressed) C = 1 , A = 0.
+        if_cs_then
+            ; Load error or cancelled
+            cmp # KERNAL_ERROR_DEVICE_NOT_PRESENT       ; C+ N+ Z+
+            if_eq_then
+                ; Device not present
+                lda # ERROR_NUMBER_DEVICE_NOT_PRESENT
+                bne _catch                              ; throw
+            else_end
 
-    ; Device present. (Attempt to) read (but not show) disk status.
-    ldx LOAD_PROGRAM_DEVICE
-    lda # 0
-    jsr PROCESS_DISK_STATUS                             ; Does CLRCHN | A+ X+ Y+ C+ BX+ CL+ DFLTN=0 DFLTO=3 STATUS=0 IN_STATUS=0 OUT_STATUS=0
+            cmp # 0
+            if_eq_then
+                ; Cancelled
+                lda # ERROR_NUMBER_CANCELLED
+                bne _catch                              ; throw
+            else_end
 
-    ldx # ERROR_NUMBER_PROGRAM_NOT_FOUND
-    sec                                                 ; FAIL
+            cmp # KERNAL_ERROR_FILE_NOT_FOUND
+            if_eq_then
+                ; Program not found
+                lda # ERROR_NUMBER_PROGRAM_NOT_FOUND
+                bne _catch                              ; throw
+            else_end
+
+            lda # ERROR_NUMBER_PROGRAM_NOT_FOUND
+            bne _catch                                  ; throw
+        else_end
+
+        ; C = 0
+        php
+        bcc _finally                                    ; bra
+    catch
+        sec
+        php
+    finally
+        pha
+            lda # PROCESS_DISK_STATUS_CLOSE
+            jsr PROCESS_DISK_STATUS                     ; C+
+        pla
+        plp
+    end
+
+    tax
 
     rts
 .endproc
@@ -1159,7 +1189,7 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 
 ;;; summary: Load command/program
 ;;; in:
-;;;   ARGV[1]: Program name
+;;;   ARGV[1]: Command name. ".sh" is added.
 .proc CMD_LOAD
     lda GNUX_ARGC_LO
     cmp # 2
@@ -1186,6 +1216,9 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
         jsr PUT_ERROR_X_NUMBER
         rts
     else_end
+
+    jsr CLOSE_DISK_COMMAND_CHANNEL
+
 
     jsr LOAD_PROGRAM_IF_NOT_ALREADY_LOADED
 
@@ -1286,10 +1319,17 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
     lda # 1
     jsr GET_AX_ARGV_A
     jsr ZSTRING_AX_LENGTH
+    cpy # 0
+    if_eq_then
+        ldx # ERROR_NUMBER_MISSING_FILE_NAME
+        jsr PUT_ERROR_X_NUMBER                          ; C1
+        rts
+    else_end
+
     cpy # FILE_NAME_MAX_LENGTH + 1
     if_ge_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
-        jsr PUT_ERROR_X_NUMBER
+        jsr PUT_ERROR_X_NUMBER                          ; C1
         rts
     else_end
 
@@ -1297,10 +1337,17 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
     lda # 2
     jsr GET_AX_ARGV_A
     jsr ZSTRING_AX_LENGTH
+    cpy # 0
+    if_eq_then
+        ldx # ERROR_NUMBER_MISSING_FILE_NAME
+        jsr PUT_ERROR_X_NUMBER                          ; C1
+        rts
+    else_end
+
     cpy # FILE_NAME_MAX_LENGTH + 1
     if_ge_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
-        jsr PUT_ERROR_X_NUMBER
+        jsr PUT_ERROR_X_NUMBER                          ; C1
         rts
     else_end
 
@@ -1408,10 +1455,19 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 
 .proc RM_LAMBDA
     jsr ZSTRING_AX_LENGTH
+    cpy # 0
+    if_eq_then
+        ldx # ERROR_NUMBER_MISSING_FILE_NAME
+        jsr PUT_ERROR_X_NUMBER                          ; C1
+        clc                                             ; Continue for each
+        rts
+    else_end
+
     cpy # FILE_NAME_MAX_LENGTH + 1
     if_eq_then
         ldx # ERROR_NUMBER_FILE_NAME_TOO_LONG
-        jsr PUT_ERROR_X_NUMBER
+        jsr PUT_ERROR_X_NUMBER                          ; C1
+        clc                                             ; Continue for each
         rts
     else_end
 
@@ -1451,14 +1507,17 @@ LOADED_PROGRAM_NAME         := LOADED_PROGRAM_NAME_FIRST
 .proc CAT_LAMBDA
     ; Is ARGV[A].LENGTH < FILE_NAME_MAX_LENGTH ?
     jsr ZSTRING_AX_LENGTH
-    if
-        cpy # 0
-        beq _then
+    cpy # 0
+    if_eq_then
+        ldx # ERROR_NUMBER_MISSING_FILE_NAME
+        jsr PUT_ERROR_X_NUMBER                          ; C1
+        rts
+    else_end
+
         cpy # FILE_NAME_MAX_LENGTH + 1
-        bcc _end                                        ; lt
-    then
+    if_ge_then
         ldx # ERROR_NUMBER_INCORRECT_ARGUMENTS
-        jsr PUT_ERROR_X_NUMBER
+        jsr PUT_ERROR_X_NUMBER                          ; C1
         clc                                             ; Continue for each
         rts
     else_end
